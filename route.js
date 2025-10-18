@@ -2,12 +2,12 @@ import express from "express";
 
 import {
   generateClaudePrompt,
-  generateNanoBananaImage
+  generateImagenImage
 } from "./controllers/AIGeneratorController.js";
 
 const router = express.Router();
 
 router.post("/generate_claude_prompt", generateClaudePrompt);
-router.post("/generate_nano_banana_image", generateNanoBananaImage);
+router.post("/generate_imagen_image", generateImagenImage);
 
 export default router;
