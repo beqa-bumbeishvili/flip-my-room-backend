@@ -1,14 +1,33 @@
 import AIService from "../services/AIService.js";
+import ImagenService from "../services/ImagenService.js";
 
-// controllers/AIGeneratorController.js
-import { GoogleGenAI } from '@google/genai';
+export const generateClaudePrompt = async (req, res) => {
+  try {
+    const { markedImage, originalImage, textureImage } = req.body;
 
-export const generateClaudePrompt = (req, res) => {
-  res.json({
-    success: true,
-    model: "claude",
-    prompt: "Sample Claude prompt generated successfully"
-  });
+    // Validate required fields
+    if (!markedImage || !originalImage || !textureImage) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields",
+        details: "markedImage, originalImage, and textureImage are required"
+      });
+    }
+
+    const prompt = await AIService.generatePromptFromImages(markedImage, originalImage, textureImage);
+
+    res.json({
+      success: true,
+      prompt: prompt
+    });
+  } catch (error) {
+    console.error('Claude Prompt Generation Error:', error);
+    res.status(500).json({
+      success: false,
+      error: "Prompt generation failed",
+      details: error.message
+    });
+  }
 };
 
 export const generateImagenImage = async (req, res) => {
@@ -24,58 +43,19 @@ export const generateImagenImage = async (req, res) => {
       });
     }
 
-    // Initialize Google GenAI client
-    const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-
-    // Note: As of now, Imagen API through @google/genai only supports text-to-image generation
-    // Multi-image input (image editing with reference) may require different approach
-    // For now, we'll generate based on the prompt
-    const response = await ai.models.generateImages({
-      model: 'imagen-4.0-generate-001',
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: '1:1'
-      }
-    });
-
-    // Get the generated image
-    const generatedImage = response.generated_images[0];
-    
-    // Convert to base64 if needed
-    const imageBase64 = generatedImage.image.image_bytes 
-      ? Buffer.from(generatedImage.image.image_bytes).toString('base64')
-      : null;
+    const result = await ImagenService.generateImage(originalImage, textureImage, prompt);
 
     res.json({
       success: true,
-      transformedImage: imageBase64 ? `data:image/png;base64,${imageBase64}` : null,
-      model: 'imagen-4.0-generate-001'
+      ...result
     });
 
   } catch (error) {
-    console.error('Imagen API Error:', error);
+    console.error('Imagen Generation Error:', error);
     res.status(500).json({
       success: false,
       error: "Image generation failed",
       details: error.message
     });
   }
-  let { markedImage, originalImage, textureImage } = req.body;
-
-  let prompt = await AIService.generatePromptFromImages(markedImage, originalImage, textureImage);
-
-
-  res.json({
-    success: true,
-    prompt: prompt
-  });
-};
-
-export const generateNanoBananaImage = (req, res) => {
-  res.json({
-    success: true,
-    model: "nano-banana",
-    message: "Sample Nano Banana image generation simulated"
-  });
 };
