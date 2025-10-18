@@ -1,3 +1,3 @@
-export async function generatePromptFromImages(markedImage, originalImage, textureImage) {
-    return 'sample prompt from service';
+export async function generatePromptFromImages(markedImage, textureImage) {
+    return 'sample prompt from qada';
 }
