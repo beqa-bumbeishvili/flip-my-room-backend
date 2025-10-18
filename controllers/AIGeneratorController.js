@@ -1,3 +1,5 @@
+import AIService from "../services/AIService.js";
+
 // controllers/AIGeneratorController.js
 import { GoogleGenAI } from '@google/genai';
 
@@ -59,4 +61,21 @@ export const generateImagenImage = async (req, res) => {
       details: error.message
     });
   }
+  let { markedImage, originalImage, textureImage } = req.body;
+
+  let prompt = await AIService.generatePromptFromImages(markedImage, originalImage, textureImage);
+
+
+  res.json({
+    success: true,
+    prompt: prompt
+  });
+};
+
+export const generateNanoBananaImage = (req, res) => {
+  res.json({
+    success: true,
+    model: "nano-banana",
+    message: "Sample Nano Banana image generation simulated"
+  });
 };
