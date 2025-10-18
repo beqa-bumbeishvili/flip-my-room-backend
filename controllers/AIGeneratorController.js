@@ -1,5 +1,12 @@
+import AIService from "../services/AIService.js";
+
 // controllers/AIGeneratorController.js
 export const generateClaudePrompt = (req, res) => {
+
+
+
+
+  
     res.json({
       success: true,
       model: "claude",
