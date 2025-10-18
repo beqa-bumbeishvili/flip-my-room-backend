@@ -31,10 +31,6 @@ app.use((req, res, next) => {
     next();
 });
 
-<<<<<<< HEAD
-=======
-// Increase payload limits for base64 images
->>>>>>> 1f8ce850de4e5297a951a4ed20aa9c8a8176f8de
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
