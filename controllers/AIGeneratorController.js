@@ -1,12 +1,12 @@
-import AIService from "../services/AIService.js";
+import { generatePromptFromImages } from '../services/AIService.js';
 import ImagenService from "../services/ImagenService.js";
 
 export const generateClaudePrompt = async (req, res) => {
   try {
-    const { markedImage, originalImage, textureImage } = req.body;
+    const { markedImage, textureImage } = req.body;
 
     // Validate required fields
-    if (!markedImage || !originalImage || !textureImage) {
+    if (!markedImage || !textureImage) {
       return res.status(400).json({
         success: false,
         error: "Missing required fields",
@@ -14,7 +14,7 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    const prompt = await AIService.generatePromptFromImages(markedImage, originalImage, textureImage);
+    const prompt = await generatePromptFromImages(markedImage, textureImage);
 
     res.json({
       success: true,
