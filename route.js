@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.get("/generate_claude_prompt", generateClaudePrompt);
-router.get("/generate_nano_banana_image", generateNanoBananaImage);
+router.post("/generate_claude_prompt", generateClaudePrompt);
+router.post("/generate_nano_banana_image", generateNanoBananaImage);
 
 export default router;
