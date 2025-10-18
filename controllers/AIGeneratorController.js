@@ -2,22 +2,21 @@ import AIService from "../services/AIService.js";
 
 // controllers/AIGeneratorController.js
 export const generateClaudePrompt = (req, res) => {
+  let { markedImage, originalImage, textureImage } = req.body;
+
+  let prompt = await AIService.generatePromptFromImages(markedImage, originalImage, textureImage);
 
 
+  res.json({
+    success: true,
+    prompt: prompt
+  });
+};
 
-
-  
-    res.json({
-      success: true,
-      model: "claude",
-      prompt: "Sample Claude prompt generated successfully"
-    });
-  };
-  
-  export const generateNanoBananaImage = (req, res) => {
-    res.json({
-      success: true,
-      model: "nano-banana",
-      message: "Sample Nano Banana image generation simulated"
-    });
-  };
+export const generateNanoBananaImage = (req, res) => {
+  res.json({
+    success: true,
+    model: "nano-banana",
+    message: "Sample Nano Banana image generation simulated"
+  });
+};
