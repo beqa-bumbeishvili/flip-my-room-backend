@@ -27,54 +27,75 @@ class ImagenService {
       this._initializeClient();
       
       console.log('\n🎨 Starting image generation...');
-      console.log('   Model: imagen-4.0-generate-001');
+      console.log('   Model: gemini-2.5-flash-image (Nano Banana)');
       console.log('   Prompt length:', prompt.length);
-      console.log('   Original image length:', originalImage?.length || 0);
-      console.log('   Texture image length:', textureImage?.length || 0);
+      console.log('   Original image provided:', !!originalImage);
+      console.log('   Texture image provided:', !!textureImage);
       
-      // Note: As of now, Imagen API through @google/genai only supports text-to-image generation
-      // Multi-image input (image editing with reference) may require different approach
-      console.log('\n📡 Calling Google Imagen API...');
-      const response = await this.ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+      // Extract base64 data from data URIs
+      const extractBase64 = (dataUri) => {
+        const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+        if (!matches) {
+          throw new Error('Invalid image data URI format');
+        }
+        return matches[2];
+      };
+
+      const originalImageBase64 = extractBase64(originalImage);
+      const mimeType = originalImage.match(/^data:([^;]+);base64,/)?.[1] || 'image/png';
+      
+      console.log('\n📡 Calling Nano Banana (Gemini 2.5 Flash Image) API...');
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: [
+          { 
+            text: `Professional interior design editing task:`+prompt+`OUTPUT: Same frame size. In-place editing only. Photorealistic quality.`
+          },
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: originalImageBase64
+            }
+          }
+        ],
         config: {
-          numberOfImages: 1,
-          aspectRatio: '1:1'
         }
       });
 
       console.log('✅ API response received');
-      console.log('   Generated images count:', response.generated_images?.length || 0);
       
       // Log complete response to file for debugging
       fs.writeFileSync('imagen-response.json', JSON.stringify(response, null, 2));
       console.log('📄 Full response saved to imagen-response.json');
       
-      // Check if we got any images (note: property is camelCase, not snake_case)
-      if (!response.generatedImages || response.generatedImages.length === 0) {
-        throw new Error('No images generated. Response: ' + JSON.stringify(response));
+      // Check if we got any candidates
+      if (!response.candidates || response.candidates.length === 0) {
+        throw new Error('No candidates returned. Response: ' + JSON.stringify(response));
       }
       
-      // Get the generated image
-      const generatedImage = response.generatedImages[0];
+      // Extract image from response
+      const candidate = response.candidates[0];
+      let imageBase64 = null;
       
-      console.log('📸 Generated image structure:', {
-        hasImage: !!generatedImage.image,
-        hasImageBytes: !!generatedImage.image?.imageBytes,
-        imageBytesLength: generatedImage.image?.imageBytes?.length || 0
-      });
-      
-      // The imageBytes is already a base64 string
-      const imageBase64 = generatedImage.image?.imageBytes;
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) {
+          imageBase64 = part.inlineData.data;
+          console.log('📸 Image found in response');
+          console.log('   Image data length:', imageBase64?.length || 0);
+          break;
+        }
+        if (part.text) {
+          console.log('📝 AI Description:', part.text);
+        }
+      }
       
       if (!imageBase64) {
-        throw new Error('No image bytes in response');
+        throw new Error('No image data in response');
       }
 
       return {
         transformedImage: `data:image/png;base64,${imageBase64}`,
-        model: 'imagen-4.0-generate-001'
+        model: 'gemini-2.5-flash-image'
       };
     } catch (error) {
       console.error('\n❌ Imagen API Error:');
