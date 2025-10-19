@@ -202,7 +202,7 @@ Return ONLY the optimized prompt text, nothing else.`
                 }
             ]
         });
-
+  
         return message.content[0].text;
     } catch (error) {
         console.error('Error calling Claude API:', error);
