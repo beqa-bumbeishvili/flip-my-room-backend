@@ -147,11 +147,18 @@ YOUR TASK:
 Analyze both images and generate a prompt that describes the material from Image 2 in precise textual detail, so Imagen can apply it to Image 1 without seeing Image 2.
 
 PROMPT STRUCTURE:
-[Action verb] + [specific target] + [detailed material description from Image 2] + [preservation instructions] + [quality requirements] + [boundary constraints]
+[Action verb] + [specific marked area description] + [detailed material description from Image 2] + [preservation instructions] + [quality requirements] + [boundary constraints]
 
 REQUIREMENTS:
 
-1. ANALYZE IMAGE 2 (textureImage) and extract:
+1. ANALYZE IMAGE 1 (markedImage) and identify the marked/selected area:
+   - Determine what surfaces are marked for transformation (walls, floors, specific objects)
+   - Describe the location precisely (e.g., "the left wall", "all floor tiles", "the cabinet doors")
+   - Note the extent of the marked area (partial or full coverage, specific sections)
+   - Identify the current material/appearance of the marked area
+   - Spatial relationships: which parts of the room are affected (e.g., "walls from floor to ceiling", "lower half of walls")
+
+2. ANALYZE IMAGE 2 (textureImage) and extract:
    - Base color + undertones (e.g., "warm white with cream undertones")
    - Pattern details: veining, grain, geometric patterns (direction, scale, characteristics)
    - Finish type: matte, satin, glossy, polished, brushed
@@ -159,22 +166,23 @@ REQUIREMENTS:
    - Material type if identifiable: marble, wood, ceramic, metal, fabric, stone
    - Texture qualities: smooth, rough, polished, textured
 
-2. DESCRIBE THE TRANSFORMATION:
+3. DESCRIBE THE TRANSFORMATION:
    - Start with action verb: "Replace/Change/Transform"
-   - Specify exact target: "all wall and floor tiles" or "the bathroom walls"
+   - Use the precise marked area description from step 1 as your target
    - Include full material description from Image 2 analysis
+   - Be specific about what is marked and what will change
 
-3. PRESERVATION INSTRUCTIONS:
+4. PRESERVATION INSTRUCTIONS:
    - "Keep the exact [room/bathroom/space] layout unchanged"
    - "Preserve all fixtures, furniture, lighting, and camera angle"
    - "Maintain original room dimensions and proportions"
 
-4. QUALITY SPECIFICATIONS:
+5. QUALITY SPECIFICATIONS:
    - "Photorealistic quality"
    - "Maintain lighting consistency with existing scene"
    - "Accurate shadows and reflections matching the original"
 
-5. BOUNDARY CONSTRAINTS:
+6. BOUNDARY CONSTRAINTS:
    - "Do not extend image boundaries"
    - "Same frame size and aspect ratio"
    - "In-place editing only, no canvas expansion"
@@ -186,7 +194,7 @@ CRITICAL RULES:
 - Your prompt must be completely self-contained
 
 EXAMPLE OUTPUT:
-"Replace all wall and floor tiles with white Calacatta marble featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones. Keep the exact bathroom layout, all fixtures, furniture, lighting, and camera angle unchanged. Photorealistic quality with accurate reflections and lighting consistency. Do not extend image boundaries. Same frame size. In-place editing only."
+"Replace the marked surfaces - specifically all wall tiles covering the left, right, and back walls from floor to ceiling, and all floor tiles throughout the bathroom - with white Calacatta marble featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones. Keep the exact bathroom layout, all fixtures, furniture, lighting, and camera angle unchanged. Photorealistic quality with accurate reflections and lighting consistency. Do not extend image boundaries. Same frame size. In-place editing only."
 
 Return ONLY the optimized prompt text, nothing else.`
                         }
