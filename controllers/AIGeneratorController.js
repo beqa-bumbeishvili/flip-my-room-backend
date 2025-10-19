@@ -19,8 +19,9 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI); //generatePromptFromImagesForSingleImage for one image
+    //const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI); //generatePromptFromImagesForSingleImage for one image
 
+    const prompt = await generatePromptFromImagesForSingleImage(markedImage, textureImage, anthropicAPI);
     res.json({
       success: true,
       prompt: prompt
