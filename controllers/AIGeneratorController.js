@@ -9,7 +9,7 @@ export const generateClaudePrompt = async (req, res) => {
     const anthropicAPI = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
-
+ 
     // Validate required fields
     if (!markedImage || !textureImage) {
       return res.status(400).json({
