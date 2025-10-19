@@ -1,5 +1,10 @@
 import { generatePromptFromImages } from '../services/AIService.js';
 import ImagenService from "../services/ImagenService.js";
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropicAPI = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 export const generateClaudePrompt = async (req, res) => {
   try {
@@ -14,7 +19,7 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    const prompt = await generatePromptFromImages(markedImage, textureImage);
+    const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI);
 
     res.json({
       success: true,
