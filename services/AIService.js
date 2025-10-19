@@ -84,3 +84,120 @@ Return ONLY the optimized prompt text, nothing else.`
         throw new Error('Failed to generate prompt from Claude');
     }
 }
+
+export async function generatePromptFromImagesForSingleImage(markedImage, textureImage, anthropicAPI) {
+    try {
+        // Extract base64 data and media type from data URI
+        // Format: data:image/png;base64,iVBORw0KG...
+        const extractImageData = (dataUri) => {
+            const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            if (!matches) {
+                throw new Error('Invalid image data URI format');
+            }
+            
+            return {
+                media_type: matches[1],
+                data: matches[2]
+            };
+        };
+
+        const markedImageData = extractImageData(markedImage);
+        const textureImageData = extractImageData(textureImage);
+        
+        // Re-encode to ensure proper base64 padding
+        const decodedMarkedImage = Buffer.from(markedImageData.data, 'base64');
+        markedImageData.data = decodedMarkedImage.toString('base64');
+        
+        const decodedTextureImage = Buffer.from(textureImageData.data, 'base64');
+        textureImageData.data = decodedTextureImage.toString('base64');
+
+        const message = await anthropicAPI.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: markedImageData.media_type,
+                                data: markedImageData.data,
+                            },
+                        },
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: textureImageData.media_type,
+                                data: textureImageData.data,
+                            },
+                        },
+                        {
+                            type: "text",
+                            text: `You are generating a prompt for Google's Imagen AI (Nano Banana) for an interior design transformation task.
+
+SYSTEM ARCHITECTURE:
+- INPUT (to you): Image 1 (markedImage - the room to edit) + Image 2 (textureImage - material reference)
+- OUTPUT (from you): A complete prompt that Imagen will use with ONLY Image 1
+- CRITICAL: Imagen will receive ONLY Image 1 + your prompt. It will NOT see Image 2.
+
+YOUR TASK:
+Analyze both images and generate a prompt that describes the material from Image 2 in precise textual detail, so Imagen can apply it to Image 1 without seeing Image 2.
+
+PROMPT STRUCTURE:
+[Action verb] + [specific target] + [detailed material description from Image 2] + [preservation instructions] + [quality requirements] + [boundary constraints]
+
+REQUIREMENTS:
+
+1. ANALYZE IMAGE 2 (textureImage) and extract:
+   - Base color + undertones (e.g., "warm white with cream undertones")
+   - Pattern details: veining, grain, geometric patterns (direction, scale, characteristics)
+   - Finish type: matte, satin, glossy, polished, brushed
+   - Reflectivity level: non-reflective, slight sheen, mirror-like
+   - Material type if identifiable: marble, wood, ceramic, metal, fabric, stone
+   - Texture qualities: smooth, rough, polished, textured
+
+2. DESCRIBE THE TRANSFORMATION:
+   - Start with action verb: "Replace/Change/Transform"
+   - Specify exact target: "all wall and floor tiles" or "the bathroom walls"
+   - Include full material description from Image 2 analysis
+
+3. PRESERVATION INSTRUCTIONS:
+   - "Keep the exact [room/bathroom/space] layout unchanged"
+   - "Preserve all fixtures, furniture, lighting, and camera angle"
+   - "Maintain original room dimensions and proportions"
+
+4. QUALITY SPECIFICATIONS:
+   - "Photorealistic quality"
+   - "Maintain lighting consistency with existing scene"
+   - "Accurate shadows and reflections matching the original"
+
+5. BOUNDARY CONSTRAINTS:
+   - "Do not extend image boundaries"
+   - "Same frame size and aspect ratio"
+   - "In-place editing only, no canvas expansion"
+
+CRITICAL RULES:
+- Do NOT reference "Image 2" or "reference image" in your output
+- Do NOT say "use the material from Image 2"
+- Write as if only the markedImage exists
+- Your prompt must be completely self-contained
+
+EXAMPLE OUTPUT:
+"Replace all wall and floor tiles with white Calacatta marble featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones. Keep the exact bathroom layout, all fixtures, furniture, lighting, and camera angle unchanged. Photorealistic quality with accurate reflections and lighting consistency. Do not extend image boundaries. Same frame size. In-place editing only."
+
+Return ONLY the optimized prompt text, nothing else.`
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return message.content[0].text;
+    } catch (error) {
+        console.error('Error calling Claude API:', error);
+        throw new Error('Failed to generate prompt from Claude');
+    }
+}
