@@ -6,20 +6,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// CORS configuration
-const allowedOrigins = [
-    'http://localhost:8080',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://flipmyroom.com',
-];
-
-// Handle CORS for all requests
+// CORS configuration - Allow all origins
 app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin);
-    }
+    res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Refresh-Token");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     
