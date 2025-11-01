@@ -49,27 +49,58 @@ export async function generatePromptFromImages(markedImage, textureImage, anthro
                         },
                         {
                             type: "text",
-                            text: `You are generating a prompt for Google's Imagen AI (Nano Banana) for an interior design transformation task.
+                            text: `You are generating a prompt for Google's Gemini 2.5 Flash Image AI for an interior design transformation task.
 
-INPUT:
-- Image 1: The target room/space to edit (may have marked areas indicating what to change)
-- Image 2: A texture/material reference image showing the desired style/material
+SYSTEM ARCHITECTURE:
+- INPUT (to you): Image 1 (markedImage - room with green lines marking areas) + Image 2 (textureImage - material reference)
+- OUTPUT (from you): A complete prompt for Gemini
+- CRITICAL: Gemini will receive TWO images: [Image 2 (texture), unmarked original room, your prompt]
+- Gemini will NOT see the green lines - you must convert visual markings into spatial text descriptions
 
-IMPORTANT: Nano Banana automatically BLENDS multiple images. You must use anti-blending language.
+YOUR TASK:
+Analyze both images and generate a prompt that tells Gemini where to apply the material and what material to use.
 
-Generate a prompt following this structure:
-[Action verb] + [specific target] + [detailed description] + [preservation instructions] + [quality requirements]
+PROMPT STRUCTURE:
+[Action verb] + [detailed material from Image 2] + [specific location from Image 1 markings] + [preservation instructions] + [quality requirements]
 
 REQUIREMENTS:
-1. Clearly label each image's role: "Image 1 is the [room/bathroom/space] to edit. Image 2 shows the [texture/material/style] reference."
-2. Add STRONG anti-blending language: "Do NOT merge or blend these images into one scene. Do NOT combine them."
-3. Be specific about the transformation: exact materials, colors, textures (e.g., "white Calacatta marble with soft gray veining, polished finish")
-4. Explicitly preserve what should NOT change: "Keep the exact layout, all fixtures, furniture, lighting, and camera angle unchanged"
-5. Include quality specs: "Photorealistic quality with accurate reflections and lighting consistency"
-6. Add boundary constraints: "Do not extend image boundaries. Same frame size. In-place editing only."
 
-EXAMPLE OUTPUT:
-"Image 1 is the bathroom to edit. Image 2 shows the tile material reference. Replace all wall and floor tiles with the material shown in Image 2 (white marble with gray veining, polished finish). Do NOT blend or merge these images into one scene. Keep Image 1's composition completely intact - only change the tile material. Preserve the exact bathroom layout, all fixtures, lighting, shadows, and camera angle unchanged. Photorealistic quality with accurate reflections. Do not extend image boundaries."
+1. ANALYZE IMAGE 1 (markedImage) - identify marked areas:
+   - Look for green line markings indicating surfaces to transform
+   - Determine what surfaces are marked (walls, floors, specific objects)
+   - Describe the location precisely (e.g., "the left wall from floor to ceiling", "all floor tiles", "the back wall")
+   - Note the extent of marked area (full or partial coverage)
+   - Spatial relationships: which parts of room are affected
+
+2. ANALYZE IMAGE 2 (textureImage) - extract material details:
+   - Base color + undertones (e.g., "warm white with cream undertones")
+   - Pattern details: veining, grain, geometric patterns (direction, scale, characteristics)
+   - Finish type: matte, satin, glossy, polished, brushed
+   - Reflectivity level: non-reflective, slight sheen, mirror-like
+   - Material type: marble, wood, ceramic, tiles, metal, fabric, stone, wallpaper
+   - Texture qualities: smooth, rough, polished, textured
+
+3. CREATE THE PROMPT:
+   - Start with action verb: "Apply/Replace"
+   - Reference material as "from the first image" with full description
+   - Reference location as "in the second image" with specific areas
+   - Format: "Apply the [full material details] from the first image to [specific locations] in the second image"
+
+4. PRESERVATION:
+   - "Keep the exact room layout, all unmarked surfaces, fixtures, furniture, lighting, shadows, and camera angle completely unchanged"
+
+5. QUALITY:
+   - "Photorealistic quality with accurate lighting, shadows, reflections, and perspective matching the original room"
+   - "Natural integration of the new material"
+
+6. BOUNDARIES:
+   - "Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only"
+
+EXAMPLE OUTPUT (for wall tiles):
+"Apply the white Calacatta marble tiles featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones, from the first image to the left wall from floor to ceiling, the right wall from floor to ceiling, and all floor tiles throughout the bathroom in the second image. Keep the exact bathroom layout, all unmarked surfaces, fixtures, furniture, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the new material. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+
+EXAMPLE OUTPUT (for wallpaper):
+"Apply the dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image to the back wall from floor to ceiling in the second image. Keep the exact room layout, all unmarked surfaces, fixtures, furniture, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting and perspective. Natural integration of the wallpaper. Same frame size. In-place editing only."
 
 Return ONLY the optimized prompt text, nothing else.`
                         }
@@ -77,7 +108,7 @@ Return ONLY the optimized prompt text, nothing else.`
                 }
             ]
         });
-
+  
         return message.content[0].text;
     } catch (error) {
         console.error('Error calling Claude API:', error);

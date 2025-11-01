@@ -31,6 +31,9 @@ class ImagenService {
       console.log('   Prompt length:', prompt.length);
       console.log('   Original image provided:', !!originalImage);
       console.log('   Texture image provided:', !!textureImage);
+
+      console.log('   Original image:', originalImage);
+      console.log('   Texture image:', textureImage);
       
       // Extract base64 data from data URIs
       const extractBase64 = (dataUri) => {
@@ -42,18 +45,27 @@ class ImagenService {
       };
 
       const originalImageBase64 = extractBase64(originalImage);
-      const mimeType = originalImage.match(/^data:([^;]+);base64,/)?.[1] || 'image/png';
+      const originalImageMimeType = originalImage.match(/^data:([^;]+);base64,/)?.[1] || 'image/png';
+
+      const textureImageBase64 = extractBase64(textureImage);
+      const textureImageMimeType = textureImage.match(/^data:([^;]+);base64,/)?.[1] || 'image/png';
       
       console.log('\n📡 Calling Nano Banana (Gemini 2.5 Flash Image) API...');
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: [
           { 
-            text: `Professional interior design editing task:`+prompt+`OUTPUT: Same frame size. In-place editing only. Photorealistic quality.`
+            text: prompt
           },
           {
             inlineData: {
-              mimeType: mimeType,
+              mimeType: textureImageMimeType,
+              data: textureImageBase64
+            }
+          },
+          {
+            inlineData: {
+              mimeType: originalImageMimeType,
               data: originalImageBase64
             }
           }
@@ -63,10 +75,6 @@ class ImagenService {
       });
 
       console.log('✅ API response received');
-      
-      // Log complete response to file for debugging
-      fs.writeFileSync('imagen-response.json', JSON.stringify(response, null, 2));
-      console.log('📄 Full response saved to imagen-response.json');
       
       // Check if we got any candidates
       if (!response.candidates || response.candidates.length === 0) {

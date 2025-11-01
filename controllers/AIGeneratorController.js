@@ -9,7 +9,7 @@ export const generateClaudePrompt = async (req, res) => {
     const anthropicAPI = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
- 
+
     // Validate required fields
     if (!markedImage || !textureImage) {
       return res.status(400).json({
@@ -19,9 +19,8 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    //const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI); //generatePromptFromImagesForSingleImage for one image
+    const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI);
 
-    const prompt = await generatePromptFromImagesForSingleImage(markedImage, textureImage, anthropicAPI);
     res.json({
       success: true,
       prompt: prompt
@@ -38,7 +37,7 @@ export const generateClaudePrompt = async (req, res) => {
 
 export const generateImagenImage = async (req, res) => {
   try {
-    const { originalImage, textureImage, prompt } = req.body;
+    let { originalImage, textureImage, prompt } = req.body;
 
     // Validate required fields
     if (!originalImage || !textureImage || !prompt) {
