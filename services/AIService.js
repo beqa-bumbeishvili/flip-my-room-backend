@@ -1,4 +1,4 @@
-export async function generatePromptFromImages(markedImage, textureImage, anthropicAPI) {
+export async function generatePromptFromImagesWithDot(markedImage, textureImage, anthropicAPI) {
     try {
         // Extract base64 data and media type from data URI
         // Format: data:image/png;base64,iVBORw0KG...
@@ -26,7 +26,7 @@ export async function generatePromptFromImages(markedImage, textureImage, anthro
 
         const message = await anthropicAPI.messages.create({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 1024,
+            max_tokens: 1500,
             temperature: 0,
             messages: [
                 {
@@ -36,16 +36,16 @@ export async function generatePromptFromImages(markedImage, textureImage, anthro
                             type: "image",
                             source: {
                                 type: "base64",
-                                media_type: markedImageData.media_type,
-                                data: markedImageData.data,
+                                media_type: textureImageData.media_type,
+                                data: textureImageData.data,
                             },
                         },
                         {
                             type: "image",
                             source: {
                                 type: "base64",
-                                media_type: textureImageData.media_type,
-                                data: textureImageData.data,
+                                media_type: markedImageData.media_type,
+                                data: markedImageData.data,
                             },
                         },
                         {
@@ -53,116 +53,112 @@ export async function generatePromptFromImages(markedImage, textureImage, anthro
                             text: `You are generating a prompt for Google's Gemini 2.5 Flash Image AI for an interior design transformation task.
 
 SYSTEM ARCHITECTURE:
-- INPUT (to you): Image 1 (markedImage - room with green lines marking areas) + Image 2 (textureImage - material reference)
+- INPUT (to you): Image 1 (textureImage - material reference) + Image 2 (markedImage - room with GREEN DOT markers)
 - OUTPUT (from you): A complete prompt for Gemini
-- CRITICAL: Gemini will receive TWO images: [Image 2 (texture), unmarked original room, your prompt]
-- Gemini will NOT see the green lines - you must convert visual markings into spatial text descriptions
+- CRITICAL: Gemini will receive TWO images: [Image 1 (texture), unmarked original room, your prompt]
+- Gemini will NOT see the green dots - you must convert dot markers into spatial text descriptions
 
-YOUR TASK:
-Analyze both images and generate a prompt that FIRST establishes what Gemini sees in the room (context), THEN specifies the transformation.
+🎯 GREEN DOT DETECTION METHOD:
+Image 2 contains small GREEN CIRCLES (color: #00FF00, pure bright green, ~10px radius) marking surfaces to transform.
+Your job: Find ALL green dots, identify which surface each dot is on, list unique surfaces.
 
-PROMPT STRUCTURE (4 PARTS):
+YOUR DETECTION TASK:
 
-PART 1 - ROOM CONTEXT: "The room contains [comprehensive description]..."
-PART 2 - TRANSFORMATION: "Replace [specific surface with current material] with [detailed new material] from the first image"
-PART 3 - PRESERVATION: "Keep everything else unchanged..."
-PART 4 - QUALITY: "Photorealistic quality..."
+STEP 1 - FIND ALL GREEN DOTS in Image 2:
+□ Scan the entire image for BRIGHT GREEN circles (color #00FF00 - pure green, RGB 0,255,0)
+□ These are small filled circles, approximately 10-20 pixels in radius
+□ Very distinct and bright - will stand out clearly against the room
+□ Count how many green dots you see total
+□ Note the approximate position of each dot
 
-REQUIREMENTS:
+STEP 2 - IDENTIFY WHICH SURFACE EACH DOT IS ON:
 
-1. ANALYZE IMAGE 1 (markedImage) - Full room analysis:
-   
-   A. DESCRIBE THE ENTIRE ROOM (for context):
-      - Spatial layout: room type, shape, ceiling type (flat, sloped, triangular, vaulted)
-      - Walls: how many walls visible, their positions (left wall, right wall, back wall, front wall)
-      - Spatial relationships: how surfaces connect (walls meeting at corners, floor-to-ceiling connections)
-      - Floor: type, coverage, material/appearance
-      - Ceiling: shape, height, material/appearance
-      - ALL objects and fixtures: toilets, sinks, bathtubs, furniture, cabinets, windows, doors, mirrors, lights, decorations
-      - Position of objects relative to walls and each other
-      - Lighting conditions: natural light, artificial light sources
-      - Overall style and atmosphere
-   
-   B. IDENTIFY MARKED AREAS (surfaces to transform):
-      
-      CRITICAL - CYAN OVERLAY DETECTION METHOD:
-      Selected surfaces are marked with a SEMI-TRANSPARENT CYAN OVERLAY (rgba(0, 255, 255, 0.4)) and GREEN BOUNDARY LINES.
-      The cyan overlay makes the selected surface highly visible - simply identify which surface(s) have the cyan tint.
-      
-      DETECTION PROCESS:
-      
-      1. SCAN FOR CYAN OVERLAY:
-         Look for surfaces with a cyan/turquoise tint overlaid on them
-         - The cyan color: rgba(0, 255, 255, 0.4) - semi-transparent light blue/turquoise
-         - You'll see the original surface texture through the cyan overlay
-         - Green boundary lines surround the cyan area
-      
-      2. IDENTIFY THE SURFACE TYPE:
-         Determine which surface has the cyan overlay:
-         - CEILING (top surface - flat, triangular, sloped, vaulted)
-         - FLOOR (bottom surface)
-         - LEFT WALL (left side from camera perspective)
-         - RIGHT WALL (right side from camera perspective)
-         - BACK WALL (far wall behind objects)
-      
-      3. CHECK FOR MULTIPLE SURFACES:
-         - Multiple surfaces can be marked at once
-         - Check ALL surfaces systematically - don't stop after finding one
-         - If both floor and right wall have cyan → mark BOTH
-         - List ALL surfaces with cyan overlay
+For EACH green dot you found, determine what surface it's marking:
+
+A. Analyze dot position and surrounding context:
+   - Where is this dot in the frame? (top, bottom, left, right, center)
+   - What's the surface texture/material around the dot?
+   - Is it on a horizontal surface (ceiling/floor) or vertical surface (wall)?
+
+B. Classify each dot by surface type:
+   - Dot on CEILING: Top portion of frame (upper 30%) on horizontal/overhead surface
+   - Dot on FLOOR: Bottom portion of frame (lower 30%) on horizontal/ground surface  
+   - Dot on LEFT WALL: Left side of frame on vertical surface
+   - Dot on RIGHT WALL: Right side of frame on vertical surface
+   - Dot on BACK WALL: Center/back of frame on vertical surface
+
+C. List each dot classification:
+   Example: "Dot 1: on ceiling, Dot 2: on ceiling, Dot 3: on right wall, Dot 4: on floor"
+
+STEP 3 - GROUP DOTS BY SURFACE:
+□ Combine multiple dots on the same surface into one surface
+□ Example: "Dots 1 & 2 both on ceiling → CEILING is marked"
+□ Example: "Dot 3 on right wall → RIGHT WALL is marked"
+□ Example: "Dot 4 on floor → FLOOR is marked"
+
+STEP 4 - LIST UNIQUE MARKED SURFACES:
+□ Write ONLY the unique surface names (one entry per surface, even if multiple dots)
+□ Format: "CEILING + RIGHT WALL + FLOOR" or "LEFT WALL + FLOOR" or just "RIGHT WALL"
+□ Do NOT list a surface if it has NO green dots on it
       
       EXAMPLES:
       
-      ✅ Right wall has cyan overlay → You detect: right wall ONLY
-      ✅ Floor has cyan overlay → You detect: floor ONLY
-      ✅ Both floor and right wall have cyan overlay → You detect: floor + right wall
-      ✅ Ceiling, left wall, and back wall all have cyan overlay → You detect: ceiling + left wall + back wall
-      ✅ Triangular ceiling has cyan overlay → You detect: ceiling ONLY
-      
-      ❌ Right wall has cyan, but you detected: right wall + floor (WRONG - floor has no cyan)
-      ❌ Ceiling has cyan, but you detected: all walls (WRONG - walls have no cyan, only ceiling does)
-      ❌ Floor and right wall have cyan, but you detected: right wall ONLY (WRONG - missed floor, check all surfaces)
-      
-      IMPORTANT NOTES:
-      - Fixtures (toilet, towel racks, mirrors, cabinets) are always preserved - only the wall/floor/ceiling surface material changes
-      - The cyan overlay may cover fixtures - this is normal, transform the surface behind them
-      - Be systematic: check ceiling, floor, left wall, right wall, back wall - mark ALL that have cyan
-      
-      For each marked surface, identify:
-      - What surfaces are marked: walls, floors, ceiling, specific objects
-      - Current material/finish on marked surfaces (e.g., "white painted drywall", "beige ceramic tiles", "concrete flooring")
-      - Precise location descriptions (e.g., "the left wall from floor to ceiling", "all floor area", "back wall only")
-      - Extent of marked area (full or partial coverage)
-      - Spatial relationships of marked areas to other elements
+✅ CORRECT: Found 2 green dots (both on ceiling) → Output: "CEILING"
+✅ CORRECT: Found 3 green dots (1 on ceiling, 2 on right wall) → Output: "CEILING + RIGHT WALL"
+✅ CORRECT: Found 4 green dots (1 on floor, 2 on left wall, 1 on right wall) → Output: "FLOOR + LEFT WALL + RIGHT WALL"
+✅ CORRECT: Found 1 green dot (on right wall only) → Output: "RIGHT WALL"
 
-2. ANALYZE IMAGE 2 (textureImage) - Extract complete material details:
-   - Base color + undertones (e.g., "warm white with cream undertones")
-   - Pattern details: veining, grain, geometric patterns (direction, scale, spacing, characteristics)
-   - Finish type: matte, satin, glossy, polished, brushed, textured
-   - Reflectivity level: non-reflective, slight sheen, mirror-like, high reflectivity
-   - Material type: marble, wood, ceramic, tiles, metal, fabric, stone, wallpaper, paint
-   - Texture qualities: smooth, rough, polished, textured, embossed
-   - Any distinctive features or characteristics
+❌ WRONG: Found dots on ceiling and right wall, but output "CEILING + RIGHT WALL + FLOOR" (no dot on floor!)
+❌ WRONG: Found 3 dots all on ceiling, but output "CEILING + CEILING + CEILING" (should be just "CEILING")
+❌ WRONG: Confused left/right - dot on left side but called it right wall
 
-3. CONSTRUCT THE PROMPT:
+CRITICAL RULES:
+- ONLY include surfaces that have at least ONE green dot
+- Multiple dots on same surface = list that surface ONCE
+- LEFT WALL = left side of frame | RIGHT WALL = right side of frame
+- Check for dots on ALL surfaces: ceiling, floor, left wall, right wall, back wall
+
+STEP 5 - ANALYZE THE ROOM (Image 2):
+Now that you've identified marked surfaces, describe the complete room:
+- Room type, shape, ceiling type (flat, sloped, triangular, vaulted)
+- Walls: how many visible, their positions (left, right, back)
+- Floor: type, coverage, material/appearance
+- Ceiling: shape, height, material/appearance
+- ALL objects and fixtures with their positions
+- Lighting conditions
+- Current material on the MARKED surfaces (where green dots are located)
+
+STEP 6 - ANALYZE THE TEXTURE (Image 1):
+Extract complete material details from the texture image:
+- Base color + undertones (e.g., "warm white with cream undertones")
+- Pattern details: veining, grain, geometric patterns (direction, scale, spacing, characteristics)
+- Finish type: matte, satin, glossy, polished, brushed, textured
+- Reflectivity level: non-reflective, slight sheen, mirror-like, high reflectivity
+- Material type: marble, wood, ceramic, tiles, metal, fabric, stone, wallpaper, paint
+- Texture qualities: smooth, rough, polished, textured, embossed
+- Any distinctive features or characteristics
+
+STEP 7 - CONSTRUCT THE GEMINI PROMPT:
 
    PART 1 - CONTEXT (2-4 sentences):
-   "The room contains [describe all structural elements: ceiling type, walls positions and relationships, floor]. [Describe all objects and fixtures with their positions]. [Current material on surfaces that will be changed]."
+   Describe the complete room including all structural elements, objects, fixtures, and current materials.
    
    Example: "The bathroom has a triangular sloped ceiling meeting two walls. The left wall extends from floor to ceiling, meeting the right wall at a right angle in the back corner. A white porcelain toilet sits against the left wall, with a chrome towel rack mounted on the right wall. The walls currently have white painted drywall, and the floor has beige ceramic tiles."
 
    PART 2 - TRANSFORMATION (1-2 sentences):
-   "Replace the [specific marked surfaces with current material description] with [complete detailed material description] from the first image."
+   Replace ONLY the surfaces where you found green dots with the texture from Image 1.
    
    Example: "Replace the left wall white painted drywall from floor to ceiling with white Calacatta marble tiles featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones from the first image."
 
    PART 3 - PRESERVATION (1 sentence):
-   "Keep the exact room layout, all unmarked surfaces, fixtures, furniture, lighting, shadows, and camera angle completely unchanged."
+   List ALL unmarked surfaces to keep unchanged.
+   
+   Example: "Keep the exact room layout, the right wall, floor, toilet, towel rack, toilet paper holder, lighting, shadows, and camera angle completely unchanged."
 
    PART 4 - QUALITY (2 sentences):
    "Photorealistic quality with accurate lighting, shadows, reflections, and perspective matching the original room. Natural integration of the new material. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
 
-COMPLETE EXAMPLE OUTPUT (bathroom with floor + right wall marked - BOTH surfaces 80%+ coverage):
+EXAMPLES OF COMPLETE OUTPUTS:
 "The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining throughout the entire floor area. The right wall currently has gray marble-look tiles with subtle veining from floor to ceiling, appearing connected to the floor tiles with the same material. The green enclosed area covers approximately 85% of the right wall's visible area AND 80% of the floor's visible area. Replace the right wall gray marble-look tiles from floor to ceiling AND the entire floor gray marble-look tiles with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, triangular ceiling, left wall, back wall, toilet, vanity, mirror, towel rack, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the botanical material on both the right wall surface and floor surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
 
 COMPLETE EXAMPLE OUTPUT (bathroom with ONLY left wall marked):
@@ -174,6 +170,18 @@ COMPLETE EXAMPLE OUTPUT (living room with wallpaper on single wall):
 COMPLETE EXAMPLE OUTPUT (empty room with floor + right wall marked):
 "The room is an empty residential space with a flat white ceiling. Three walls are visible: a back wall with a large black-framed window, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The right wall currently has white painted drywall with a smooth matte finish, and the floor currently has rough gray concrete. Replace the right wall white painted drywall from floor to ceiling and the entire concrete floor surface with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact room layout, ceiling, back wall, left wall, window, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting and perspective. Natural integration of the material. Do not extend image boundaries. Same frame size. In-place editing only."
 
+COMPLETE EXAMPLE OUTPUT (empty room with ceiling + right wall marked):
+"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface. The ceiling currently has smooth white painted drywall, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the flat ceiling smooth white painted drywall and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, left wall, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both the ceiling surface and right wall surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+
+COMPLETE EXAMPLE OUTPUT (empty room with floor + left wall marked):
+"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The left wall (on the LEFT side of the frame) currently has white painted drywall with a smooth matte finish from floor to ceiling, and the floor currently has rough gray concrete. Replace the left wall white painted drywall from floor to ceiling and the entire concrete floor surface with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, ceiling, back wall with window, right wall, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both the left wall surface and floor surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+
+COMPLETE EXAMPLE OUTPUT (empty room with ceiling + left wall + right wall marked - NO FLOOR):
+"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The ceiling currently has smooth white painted drywall, the left wall currently has white painted drywall with a smooth matte finish from floor to ceiling, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the flat ceiling smooth white painted drywall, the left wall white painted drywall from floor to ceiling, and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on the ceiling surface and both wall surfaces only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+
+COMPLETE EXAMPLE OUTPUT (empty room with left wall + right wall marked ONLY - NO CEILING, NO FLOOR):
+"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The left wall currently has white painted drywall with a smooth matte finish from floor to ceiling, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the left wall white painted drywall from floor to ceiling and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, flat white ceiling, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both wall surfaces only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+
 COMPLETE EXAMPLE OUTPUT (busy bathroom with ONLY triangular ceiling marked):
 "The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining. The triangular ceiling currently has smooth white painted drywall. The walls have gray marble-look tiles, and the floor has matching gray marble tiles. Replace the triangular sloped ceiling smooth white painted drywall with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, all walls, floor tiles, toilet, vanity, mirror, towel rack, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wallpaper on the ceiling surface only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
 
@@ -183,7 +191,17 @@ COMPLETE EXAMPLE OUTPUT (bathroom with ONLY right wall marked - green area cover
 COMPLETE EXAMPLE OUTPUT (bathroom with ONLY left wall marked - wall has towel rack and drawers on it):
 "The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it and small floating drawers attached to it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining throughout. The left wall currently has gray marble-look tiles with subtle veining from floor to ceiling, with the chrome towel rack and small drawers mounted on the surface. The green enclosed area covers approximately 75% of the left wall's visible area (including the area behind/around the towel rack and drawers). Replace the left wall gray marble-look tiles from floor to ceiling with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, triangular ceiling, right wall, back wall, floor tiles, toilet, vanity, mirror, towel rack, drawers, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. The towel rack and drawers remain in their current positions on the transformed wall surface. Photorealistic quality with accurate lighting, shadows, and reflections. Natural integration of the wallpaper on the left wall surface only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
 
-Return ONLY the optimized prompt text following this structure, nothing else.`
+⚠️⚠️⚠️ CRITICAL OUTPUT INSTRUCTIONS ⚠️⚠️⚠️
+
+DO NOT include your detection steps, thinking process, or analysis in your response.
+DO NOT write "STEP 1", "STEP 2", "STEP 3", "Looking at the images", "I can see", or any commentary.
+DO NOT explain what you're doing or how you detected the surfaces.
+DO NOT show your work or reasoning.
+
+Return ONLY the final Gemini prompt as ONE complete paragraph.
+Start directly with "The room..." or "The bathroom..." (no preamble).
+
+Your entire output must be JUST the prompt that Gemini will read - nothing else.`
                         }
                     ]
                 }

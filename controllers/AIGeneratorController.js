@@ -1,4 +1,4 @@
-import { generatePromptFromImages, generatePromptFromImagesForSingleImage } from '../services/AIService.js';
+import {generatePromptFromImagesWithDot } from '../services/AIService.js';
 import ImagenService from "../services/ImagenService.js";
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -19,7 +19,8 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    const prompt = await generatePromptFromImages(markedImage, textureImage, anthropicAPI);
+    // const prompt = await generatePromptFromImages(markedImage, textureImage, originalImage, anthropicAPI);
+    const prompt = await generatePromptFromImagesWithDot(markedImage, textureImage, anthropicAPI);
 
     res.json({
       success: true,
