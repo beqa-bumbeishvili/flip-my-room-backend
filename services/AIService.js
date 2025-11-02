@@ -4,6 +4,7 @@ export async function generatePromptFromImagesWithDot(markedImage, textureImage,
         // Format: data:image/png;base64,iVBORw0KG...
         const extractImageData = (dataUri) => {
             const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            
             if (!matches) {
                 throw new Error('Invalid image data URI format');
             }
@@ -59,7 +60,7 @@ SYSTEM ARCHITECTURE:
 - Gemini will NOT see the green dots - you must convert dot markers into spatial text descriptions
 
 🎯 GREEN DOT DETECTION METHOD:
-Image 2 contains small GREEN CIRCLES (color: #00FF00, pure bright green, ~10px radius) marking surfaces to transform.
+Image 2 contains small GREEN CIRCLES (color: #00FF00, pure bright green, ~30px radius) marking surfaces to transform.
 Your job: Find ALL green dots, identify which surface each dot is on, list unique surfaces.
 
 YOUR DETECTION TASK:
@@ -118,78 +119,51 @@ CRITICAL RULES:
 - LEFT WALL = left side of frame | RIGHT WALL = right side of frame
 - Check for dots on ALL surfaces: ceiling, floor, left wall, right wall, back wall
 
-STEP 5 - ANALYZE THE ROOM (Image 2):
-Now that you've identified marked surfaces, describe the complete room:
-- Room type, shape, ceiling type (flat, sloped, triangular, vaulted)
-- Walls: how many visible, their positions (left, right, back)
-- Floor: type, coverage, material/appearance
-- Ceiling: shape, height, material/appearance
-- ALL objects and fixtures with their positions
-- Lighting conditions
-- Current material on the MARKED surfaces (where green dots are located)
+STEP 5 - IDENTIFY ROOM ELEMENTS (Image 2):
+Now that you've identified marked surfaces, just note:
+- What major objects/fixtures are in the room (toilet, vanity, furniture, etc.)
+- Which surfaces are unmarked (these will go in the "Keep unchanged" part)
 
-STEP 6 - ANALYZE THE TEXTURE (Image 1):
-Extract complete material details from the texture image:
-- Base color + undertones (e.g., "warm white with cream undertones")
-- Pattern details: veining, grain, geometric patterns (direction, scale, spacing, characteristics)
-- Finish type: matte, satin, glossy, polished, brushed, textured
-- Reflectivity level: non-reflective, slight sheen, mirror-like, high reflectivity
-- Material type: marble, wood, ceramic, tiles, metal, fabric, stone, wallpaper, paint
-- Texture qualities: smooth, rough, polished, textured, embossed
-- Any distinctive features or characteristics
+STEP 6 - NOTE THE TEXTURE IMAGE:
+Gemini will see the texture image (Image 1), so you don't need to describe it in detail.
+Just refer to it as "the texture from the first image" in your prompt.
 
-STEP 7 - CONSTRUCT THE GEMINI PROMPT:
+STEP 7 - CONSTRUCT THE GEMINI PROMPT (ULTRA-EXPLICIT FORMAT):
 
-   PART 1 - CONTEXT (2-4 sentences):
-   Describe the complete room including all structural elements, objects, fixtures, and current materials.
+   Make it CRYSTAL CLEAR which surfaces to transform. Use explicit numbering or emphasis.
+
+   PART 1 - ACTION (use numbered list for multiple surfaces):
+   If ONE surface: "Transform the entire [surface] with the texture from the first image."
+   If MULTIPLE surfaces: "Transform these surfaces with the texture from the first image: 1) the complete [surface 1], 2) the complete [surface 2], 3) the complete [surface 3]."
    
-   Example: "The bathroom has a triangular sloped ceiling meeting two walls. The left wall extends from floor to ceiling, meeting the right wall at a right angle in the back corner. A white porcelain toilet sits against the left wall, with a chrome towel rack mounted on the right wall. The walls currently have white painted drywall, and the floor has beige ceramic tiles."
-
-   PART 2 - TRANSFORMATION (1-2 sentences):
-   Replace ONLY the surfaces where you found green dots with the texture from Image 1.
+   PART 2 - PRESERVATION (1 sentence):
+   "Keep all fixtures in place. Keep [unmarked surfaces] unchanged."
    
-   Example: "Replace the left wall white painted drywall from floor to ceiling with white Calacatta marble tiles featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones from the first image."
+   PART 3 - QUALITY (1 sentence):
+   "Photorealistic quality. Same frame size. In-place editing."
 
-   PART 3 - PRESERVATION (1 sentence):
-   List ALL unmarked surfaces to keep unchanged.
+   COMPLETE FORMAT FOR MULTIPLE SURFACES:
+   "Transform these surfaces with the texture from the first image: 1) [surface 1], 2) [surface 2]. Keep all fixtures in place. Keep [unmarked surfaces] unchanged. Photorealistic quality. Same frame size. In-place editing."
    
-   Example: "Keep the exact room layout, the right wall, floor, toilet, towel rack, toilet paper holder, lighting, shadows, and camera angle completely unchanged."
-
-   PART 4 - QUALITY (2 sentences):
-   "Photorealistic quality with accurate lighting, shadows, reflections, and perspective matching the original room. Natural integration of the new material. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+   CRITICAL: 
+   - Use numbered lists (1, 2, 3) for clarity when multiple surfaces
+   - Use "Transform" instead of "Apply" - more direct
+   - Always say "complete" or "entire" before surface names
+   - ONLY list surfaces that were actually marked (have green dots)
 
 EXAMPLES OF COMPLETE OUTPUTS:
-"The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining throughout the entire floor area. The right wall currently has gray marble-look tiles with subtle veining from floor to ceiling, appearing connected to the floor tiles with the same material. The green enclosed area covers approximately 85% of the right wall's visible area AND 80% of the floor's visible area. Replace the right wall gray marble-look tiles from floor to ceiling AND the entire floor gray marble-look tiles with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, triangular ceiling, left wall, back wall, toilet, vanity, mirror, towel rack, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the botanical material on both the right wall surface and floor surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
 
-COMPLETE EXAMPLE OUTPUT (bathroom with ONLY left wall marked):
-"The bathroom has a triangular sloped ceiling meeting two walls at clean angles. The left wall extends from floor to ceiling, meeting the right wall at a right angle in the back corner, creating an enclosed corner space. A modern white porcelain toilet sits against the left wall, with a chrome towel rack mounted on the right wall above a small chrome toilet paper holder. The left wall currently has white painted drywall with a smooth matte finish. The right wall has white painted drywall, and the floor has beige ceramic tiles. Replace the left wall white painted drywall from floor to ceiling with white Calacatta marble tiles featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones from the first image. Keep the exact bathroom layout, the right wall, floor, toilet, towel rack, toilet paper holder, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the new material. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+Example 1 - Left Wall + Right Wall ONLY (NO floor, NO ceiling):
+"Transform these surfaces with the texture from the first image: 1) the entire left wall from floor to ceiling, 2) the entire right wall from floor to ceiling. Keep all fixtures in place. Keep the ceiling, floor, and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
 
-COMPLETE EXAMPLE OUTPUT (living room with wallpaper on single wall):
-"The living room contains a flat white ceiling spanning the width of the space. Three walls are visible: the back wall spans the full width from floor to ceiling, meeting perpendicular side walls on the left and right. A beige fabric sofa sits centered against the back wall, flanked by two wooden side tables with table lamps. A coffee table sits in front of the sofa on a cream area rug. The back wall currently has smooth off-white painted drywall, the side walls have light gray paint, and the floor is light oak hardwood. Replace the back wall off-white painted drywall from floor to ceiling with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact room layout, all furniture, side walls, floor, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting and perspective matching the original room. Natural integration of the wallpaper. Do not extend image boundaries. Same frame size. In-place editing only."
+Example 2 - Floor + Right Wall:
+"Transform these surfaces with the texture from the first image: 1) the entire right wall from floor to ceiling, 2) the complete floor area. Keep all fixtures in place. Keep the ceiling, left wall, and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
 
-COMPLETE EXAMPLE OUTPUT (empty room with floor + right wall marked):
-"The room is an empty residential space with a flat white ceiling. Three walls are visible: a back wall with a large black-framed window, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The right wall currently has white painted drywall with a smooth matte finish, and the floor currently has rough gray concrete. Replace the right wall white painted drywall from floor to ceiling and the entire concrete floor surface with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact room layout, ceiling, back wall, left wall, window, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting and perspective. Natural integration of the material. Do not extend image boundaries. Same frame size. In-place editing only."
+Example 3 - Left Wall only:
+"Transform the entire left wall from floor to ceiling with the texture from the first image. Keep all fixtures in place. Keep the ceiling, right wall, back wall, and floor unchanged. Photorealistic quality. Same frame size. In-place editing."
 
-COMPLETE EXAMPLE OUTPUT (empty room with ceiling + right wall marked):
-"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface. The ceiling currently has smooth white painted drywall, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the flat ceiling smooth white painted drywall and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, left wall, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both the ceiling surface and right wall surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (empty room with floor + left wall marked):
-"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The left wall (on the LEFT side of the frame) currently has white painted drywall with a smooth matte finish from floor to ceiling, and the floor currently has rough gray concrete. Replace the left wall white painted drywall from floor to ceiling and the entire concrete floor surface with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, ceiling, back wall with window, right wall, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both the left wall surface and floor surface. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (empty room with ceiling + left wall + right wall marked - NO FLOOR):
-"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The ceiling currently has smooth white painted drywall, the left wall currently has white painted drywall with a smooth matte finish from floor to ceiling, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the flat ceiling smooth white painted drywall, the left wall white painted drywall from floor to ceiling, and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on the ceiling surface and both wall surfaces only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (empty room with left wall + right wall marked ONLY - NO CEILING, NO FLOOR):
-"The room is an empty residential space with a flat white ceiling spanning the width and depth of the space. Three walls are visible: a back wall with a large black-framed window showing buildings outside, a left wall with smooth white painted drywall, and a right wall meeting the back wall at a right angle. The floor is unfinished concrete with a rough, mottled gray surface covering the entire floor area. The left wall currently has white painted drywall with a smooth matte finish from floor to ceiling, and the right wall currently has white painted drywall with a smooth matte finish from floor to ceiling. Replace the left wall white painted drywall from floor to ceiling and the right wall white painted drywall from floor to ceiling with rich walnut wood paneling featuring geometric circular and curved patterns in varying wood grain directions, with alternating light and dark walnut tones creating dimensional relief panels in a sophisticated geometric composition from the first image. Keep the exact room layout, back wall with window, flat white ceiling, concrete floor, natural lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wood paneling on both wall surfaces only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (busy bathroom with ONLY triangular ceiling marked):
-"The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining. The triangular ceiling currently has smooth white painted drywall. The walls have gray marble-look tiles, and the floor has matching gray marble tiles. Replace the triangular sloped ceiling smooth white painted drywall with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, all walls, floor tiles, toilet, vanity, mirror, towel rack, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the wallpaper on the ceiling surface only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (bathroom with ONLY right wall marked - green area covers wall but barely touches floor):
-"The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining throughout the entire floor area. The right wall currently has gray marble-look tiles with subtle veining from floor to ceiling. The green enclosed area covers approximately 80% of the right wall's visible area, while only touching the very bottom edge of the floor (less than 5% of floor area). Replace the right wall gray marble-look tiles from floor to ceiling with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, triangular ceiling, left wall, back wall, floor tiles, toilet, vanity, mirror, towel rack, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. Photorealistic quality with accurate lighting, shadows, and reflections matching the original room. Natural integration of the botanical wallpaper on the right wall surface only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
-
-COMPLETE EXAMPLE OUTPUT (bathroom with ONLY left wall marked - wall has towel rack and drawers on it):
-"The bathroom has a triangular sloped ceiling meeting two walls at clean angles, creating a peaked roofline. The left wall extends from floor to ceiling with a chrome towel rack mounted on it and small floating drawers attached to it, meeting the right wall at a right angle in the back corner. A modern white porcelain toilet sits against the right wall. A wall-mounted floating vanity cabinet with white countertop and rectangular mirror is positioned on the back wall, with two crystal pendant lights hanging above. The floor has gray marble-look large format tiles with subtle veining throughout. The left wall currently has gray marble-look tiles with subtle veining from floor to ceiling, with the chrome towel rack and small drawers mounted on the surface. The green enclosed area covers approximately 75% of the left wall's visible area (including the area behind/around the towel rack and drawers). Replace the left wall gray marble-look tiles from floor to ceiling with dark blue tropical botanical wallpaper featuring layered palm fronds, monstera leaves, and large tropical foliage in navy blue, teal, and forest green tones with a painterly matte finish from the first image. Keep the exact bathroom layout, triangular ceiling, right wall, back wall, floor tiles, toilet, vanity, mirror, towel rack, drawers, crystal pendant lights, lighting, shadows, and camera angle completely unchanged. The towel rack and drawers remain in their current positions on the transformed wall surface. Photorealistic quality with accurate lighting, shadows, and reflections. Natural integration of the wallpaper on the left wall surface only. Do not extend image boundaries. Same frame size and aspect ratio. In-place editing only."
+Example 4 - Ceiling + Left Wall + Right Wall (NO floor):
+"Transform these surfaces with the texture from the first image: 1) the complete ceiling, 2) the entire left wall from floor to ceiling, 3) the entire right wall from floor to ceiling. Keep all fixtures in place. Keep the floor and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
 
 ⚠️⚠️⚠️ CRITICAL OUTPUT INSTRUCTIONS ⚠️⚠️⚠️
 
