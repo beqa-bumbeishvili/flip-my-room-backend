@@ -1,4 +1,4 @@
-import {generatePromptFromImagesWithDot } from '../services/AIService.js';
+import {generatePromptWithRepeatedImage, generatePromptFromImageOptimizedForFloor } from '../services/AIService.js';
 import ImagenService from "../services/ImagenService.js";
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -12,7 +12,7 @@ export const generateClaudePrompt = async (req, res) => {
 
     // Validate required fields
     if (!markedImage || !textureImage) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         error: "Missing required fields",
         details: "markedImage, originalImage, and textureImage are required"
@@ -20,7 +20,7 @@ export const generateClaudePrompt = async (req, res) => {
     }
 
     // const prompt = await generatePromptFromImages(markedImage, textureImage, originalImage, anthropicAPI);
-    const prompt = await generatePromptFromImagesWithDot(markedImage, textureImage, anthropicAPI);
+    const prompt = await generatePromptFromImageOptimizedForFloor(markedImage, textureImage, anthropicAPI);
 
     res.json({
       success: true,

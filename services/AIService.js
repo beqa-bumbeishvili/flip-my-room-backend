@@ -1,4 +1,138 @@
-export async function generatePromptFromImagesWithDot(markedImage, textureImage, anthropicAPI) {
+export async function generatePromptFromImagesForSingleImage(markedImage, textureImage, anthropicAPI) {
+    try {
+        // Extract base64 data and media type from data URI
+        // Format: data:image/png;base64,iVBORw0KG...
+        const extractImageData = (dataUri) => {
+            const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            if (!matches) {
+                throw new Error('Invalid image data URI format');
+            }
+            
+            return {
+                media_type: matches[1],
+                data: matches[2]
+            };
+        };
+
+        const markedImageData = extractImageData(markedImage);
+        const textureImageData = extractImageData(textureImage);
+        
+        // Re-encode to ensure proper base64 padding
+        const decodedMarkedImage = Buffer.from(markedImageData.data, 'base64');
+        markedImageData.data = decodedMarkedImage.toString('base64');
+        
+        const decodedTextureImage = Buffer.from(textureImageData.data, 'base64');
+        textureImageData.data = decodedTextureImage.toString('base64');
+
+        const message = await anthropicAPI.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            temperature: 0,
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: markedImageData.media_type,
+                                data: markedImageData.data,
+                            },
+                        },
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: textureImageData.media_type,
+                                data: textureImageData.data,
+                            },
+                        },
+                        {
+                            type: "text",
+                            text: `You are generating a prompt for Google's Imagen AI (Nano Banana) for an interior design transformation task.
+
+SYSTEM ARCHITECTURE:
+- INPUT (to you): Image 1 (markedImage - the room to edit) + Image 2 (textureImage - material reference)
+- OUTPUT (from you): A complete prompt that Imagen will use with ONLY Image 1
+- CRITICAL: Imagen will receive ONLY Image 1 + your prompt. It will NOT see Image 2.
+
+YOUR TASK:
+Analyze both images and generate a prompt that describes the material from Image 2 in precise textual detail, so Imagen can apply it to Image 1 without seeing Image 2.
+
+PROMPT STRUCTURE:
+[Action verb] + [specific marked area description] + [detailed material description from Image 2] + [preservation instructions] + [quality specifications] + [boundary constraints]
+
+REQUIREMENTS:
+
+1. ANALYZE IMAGE 1 (markedImage) and identify the marked/selected area:
+   - Determine what surfaces are marked for transformation (walls, floors, specific objects)
+   - Describe the location precisely (e.g., "the left wall", "all floor tiles", "the cabinet doors")
+   - Note the extent of the marked area (partial or full coverage, specific sections)
+   - Identify the current material/appearance of the marked area
+   - Spatial relationships: which parts of the room are affected (e.g., "walls from floor to ceiling", "lower half of walls")
+
+2. ANALYZE IMAGE 2 (textureImage) and extract:
+   - Base color + undertones (e.g., "warm white with cream undertones")
+   - Pattern details: veining, grain, geometric patterns (direction, scale, characteristics)
+   - Finish type: matte, satin, glossy, polished, brushed
+   - Reflectivity level: non-reflective, slight sheen, mirror-like
+   - Material type if identifiable: marble, wood, ceramic, metal, fabric, stone
+   - Texture qualities: smooth, rough, polished, textured
+
+3. DESCRIBE THE TRANSFORMATION:
+   - Start with action verb: "Replace/Change/Transform"
+   - Use the precise marked area description from step 1 as your target
+   - Include full material description from Image 2 analysis
+   - Be specific about what is marked and what will change
+
+4. PRESERVATION INSTRUCTIONS:
+   - "Keep the exact [room/bathroom/space] layout unchanged"
+   - "Preserve all fixtures, furniture, lighting, and camera angle"
+   - "Maintain original room dimensions and proportions"
+
+5. QUALITY SPECIFICATIONS:
+   - "Photorealistic quality"
+   - "Maintain lighting consistency with existing scene"
+   - "Accurate shadows and reflections matching the original"
+
+6. BOUNDARY CONSTRAINTS:
+   - "Do not extend image boundaries"
+   - "Same frame size and aspect ratio"
+   - "In-place editing only, no canvas expansion"
+
+CRITICAL RULES:
+- Do NOT reference "Image 2" or "reference image" in your output
+- Do NOT say "use the material from Image 2"
+- Write as if only the markedImage exists
+- Your prompt must be completely self-contained
+
+REVISED EXAMPLES OF COMPLETE OUTPUTS:
+
+Example 1 - Right Wall only:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire right wall surface in the second image. Tile this pattern repeatedly across the full right wall from floor to ceiling with no gaps."
+
+Example 2 - Left Wall + Right Wall:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire left wall surface in the second image as well as the entire right wall surface. Tile this pattern repeatedly across the full left wall and right wall from floor to ceiling with no gaps."
+
+Example 3 - Right Wall + Floor:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire right wall surface in the second image as well as the entire floor surface. Tile this pattern repeatedly across the full right wall from floor to ceiling and across the full floor with no gaps."
+
+Return ONLY the optimized prompt text, nothing else.`
+                        }
+                    ]
+                }
+            ]
+        });
+  
+        return message.content[0].text;
+    } catch (error) {
+        console.error('Error calling Claude API:', error);
+        throw new Error('Failed to generate prompt from Claude');
+    }
+}
+
+export async function generatePromptWithRepeatedImage(markedImage, textureImage, anthropicAPI) {
     try {
         // Extract base64 data and media type from data URI
         // Format: data:image/png;base64,iVBORw0KG...
@@ -14,7 +148,7 @@ export async function generatePromptFromImagesWithDot(markedImage, textureImage,
                 data: matches[2]
             };
         };
-
+        
         const markedImageData = extractImageData(markedImage);
         const textureImageData = extractImageData(textureImage);
         
@@ -86,7 +220,7 @@ B. Classify each dot by surface type:
    - Dot on FLOOR: Bottom portion of frame (lower 30%) on horizontal/ground surface  
    - Dot on LEFT WALL: Left side of frame on vertical surface
    - Dot on RIGHT WALL: Right side of frame on vertical surface
-   - Dot on BACK WALL: Center/back of frame on vertical surface
+   - Dot on FRONT WALL: Center/back of frame on vertical surface (closest to viewer, if identifiable)
 
 C. List each dot classification:
    Example: "Dot 1: on ceiling, Dot 2: on ceiling, Dot 3: on right wall, Dot 4: on floor"
@@ -117,65 +251,65 @@ CRITICAL RULES:
 - ONLY include surfaces that have at least ONE green dot
 - Multiple dots on same surface = list that surface ONCE
 - LEFT WALL = left side of frame | RIGHT WALL = right side of frame
-- Check for dots on ALL surfaces: ceiling, floor, left wall, right wall, back wall
+- Check for dots on ALL surfaces: ceiling, floor, left wall, right wall, front wall
 
 STEP 5 - IDENTIFY ROOM ELEMENTS (Image 2):
 Now that you've identified marked surfaces, just note:
 - What major objects/fixtures are in the room (toilet, vanity, furniture, etc.)
 - Which surfaces are unmarked (these will go in the "Keep unchanged" part)
 
-STEP 6 - NOTE THE TEXTURE IMAGE:
-Gemini will see the texture image (Image 1), so you don't need to describe it in detail.
-Just refer to it as "the texture from the first image" in your prompt.
+STEP 6 - CONSTRUCT THE GEMINI PROMPT (SIMPLE & CLEAR FORMAT):
 
-STEP 7 - CONSTRUCT THE GEMINI PROMPT (ULTRA-EXPLICIT FORMAT):
+   Keep it SHORT and NATURAL. Use the "Take... and tile it repeatedly" format.
+   DO NOT use "image 1" or "image 2" - use clearer references.
+   Make it CRYSTAL CLEAR that the texture should be repeated as a tiled pattern.
 
-   Make it CRYSTAL CLEAR which surfaces to transform. Use explicit numbering or emphasis.
-
-   PART 1 - ACTION (use numbered list for multiple surfaces):
-   If ONE surface: "Transform the entire [surface] with the texture from the first image."
-   If MULTIPLE surfaces: "Transform these surfaces with the texture from the first image: 1) the complete [surface 1], 2) the complete [surface 2], 3) the complete [surface 3]."
+   COMPLETE FORMAT:
    
-   PART 2 - PRESERVATION (1 sentence):
-   "Keep all fixtures in place. Keep [unmarked surfaces] unchanged."
-   
-   PART 3 - QUALITY (1 sentence):
-   "Photorealistic quality. Same frame size. In-place editing."
+   FOR SINGLE SURFACE:
+   "Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire [surface 1] surface in the second image. Tile this pattern repeatedly across the full [surface 1] from floor to ceiling with no gaps."
 
-   COMPLETE FORMAT FOR MULTIPLE SURFACES:
-   "Transform these surfaces with the texture from the first image: 1) [surface 1], 2) [surface 2]. Keep all fixtures in place. Keep [unmarked surfaces] unchanged. Photorealistic quality. Same frame size. In-place editing."
-   
-   CRITICAL: 
-   - Use numbered lists (1, 2, 3) for clarity when multiple surfaces
-   - Use "Transform" instead of "Apply" - more direct
-   - Always say "complete" or "entire" before surface names
+   FOR TWO SURFACES:
+   "Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire [surface 1] surface in the second image as well as the entire [surface 2] surface. Tile this pattern repeatedly across the full [surface 1] and [surface 2] from floor to ceiling with no gaps."
+
+   CRITICAL PHRASING RULES:
+   - Use "the texture/material shown in the first image" (covers tiles, wood, wallpaper, etc.)
+   - Use "use it as a repeating tile pattern" (makes tiling action explicit)
+   - Use "to completely cover the entire [surface] surface"
+   - Use "Tile this pattern repeatedly across the full [surface]"
+   - End with "from floor to ceiling with no gaps"
+   - Always use "the entire" and "the full" for emphasis
+   - Keep it natural and flowing
    - ONLY list surfaces that were actually marked (have green dots)
 
-EXAMPLES OF COMPLETE OUTPUTS:
+REVISED EXAMPLES OF COMPLETE OUTPUTS:
 
-Example 1 - Left Wall + Right Wall ONLY (NO floor, NO ceiling):
-"Transform these surfaces with the texture from the first image: 1) the entire left wall from floor to ceiling, 2) the entire right wall from floor to ceiling. Keep all fixtures in place. Keep the ceiling, floor, and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
+Example 1 - Right Wall only:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire right wall surface in the second image. Tile this pattern repeatedly across the full right wall from floor to ceiling with no gaps."
 
-Example 2 - Floor + Right Wall:
-"Transform these surfaces with the texture from the first image: 1) the entire right wall from floor to ceiling, 2) the complete floor area. Keep all fixtures in place. Keep the ceiling, left wall, and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
+Example 2 - Left Wall + Right Wall:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire left wall surface in the second image as well as the entire right wall surface. Tile this pattern repeatedly across the full left wall and right wall from floor to ceiling with no gaps."
 
-Example 3 - Left Wall only:
-"Transform the entire left wall from floor to ceiling with the texture from the first image. Keep all fixtures in place. Keep the ceiling, right wall, back wall, and floor unchanged. Photorealistic quality. Same frame size. In-place editing."
+Example 3 - Right Wall + Floor:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire right wall surface in the second image as well as the entire floor surface. Tile this pattern repeatedly across the full right wall from floor to ceiling and across the full floor with no gaps."
 
-Example 4 - Ceiling + Left Wall + Right Wall (NO floor):
-"Transform these surfaces with the texture from the first image: 1) the complete ceiling, 2) the entire left wall from floor to ceiling, 3) the entire right wall from floor to ceiling. Keep all fixtures in place. Keep the floor and back wall unchanged. Photorealistic quality. Same frame size. In-place editing."
+🚨🚨🚨 EXTREMELY CRITICAL OUTPUT INSTRUCTIONS 🚨🚨🚨
 
-⚠️⚠️⚠️ CRITICAL OUTPUT INSTRUCTIONS ⚠️⚠️⚠️
+YOUR RESPONSE MUST BE ONLY THE FINAL PROMPT - NOTHING ELSE!
 
-DO NOT include your detection steps, thinking process, or analysis in your response.
-DO NOT write "STEP 1", "STEP 2", "STEP 3", "Looking at the images", "I can see", or any commentary.
-DO NOT explain what you're doing or how you detected the surfaces.
-DO NOT show your work or reasoning.
+❌ DO NOT WRITE: "STEP 1", "STEP 2", "STEP 3", "STEP 4", "STEP 5", "STEP 6"
+❌ DO NOT WRITE: "Looking at the images", "I found", "I can see", "This appears"
+❌ DO NOT WRITE: "GREEN DOT DETECTION", "DOT SURFACE IDENTIFICATION", "GROUPING"
+❌ DO NOT WRITE: "GEMINI PROMPT:", or any label before the prompt
+❌ DO NOT explain your process, reasoning, or analysis
+❌ DO NOT describe the room or what you see
+❌ DO NOT show your work
 
-Return ONLY the final Gemini prompt as ONE complete paragraph.
-Start directly with "The room..." or "The bathroom..." (no preamble).
+✅ WRITE ONLY: The prompt sentence that starts with "Take the texture/material shown in the first image..."
 
-Your entire output must be JUST the prompt that Gemini will read - nothing else.`
+Your ENTIRE response must be ONE OR TWO SENTENCES ONLY.
+No headers, no labels, no explanations, no analysis - JUST THE PROMPT.
+Start directly with "Take the texture/material shown in the first image..." - nothing before or after.`
                         }
                     ]
                 }
@@ -189,12 +323,13 @@ Your entire output must be JUST the prompt that Gemini will read - nothing else.
     }
 }
 
-export async function generatePromptFromImagesForSingleImage(markedImage, textureImage, anthropicAPI) {
+export async function generatePromptFromImageOptimizedForFloor(markedImage, textureImage, anthropicAPI) {
     try {
         // Extract base64 data and media type from data URI
         // Format: data:image/png;base64,iVBORw0KG...
         const extractImageData = (dataUri) => {
             const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            
             if (!matches) {
                 throw new Error('Invalid image data URI format');
             }
@@ -204,7 +339,7 @@ export async function generatePromptFromImagesForSingleImage(markedImage, textur
                 data: matches[2]
             };
         };
-
+        
         const markedImageData = extractImageData(markedImage);
         const textureImageData = extractImageData(textureImage);
         
@@ -217,7 +352,7 @@ export async function generatePromptFromImagesForSingleImage(markedImage, textur
 
         const message = await anthropicAPI.messages.create({
             model: "claude-sonnet-4-20250514",
-            max_tokens: 1024,
+            max_tokens: 1500,
             temperature: 0,
             messages: [
                 {
@@ -227,81 +362,99 @@ export async function generatePromptFromImagesForSingleImage(markedImage, textur
                             type: "image",
                             source: {
                                 type: "base64",
-                                media_type: markedImageData.media_type,
-                                data: markedImageData.data,
+                                media_type: textureImageData.media_type,
+                                data: textureImageData.data,
                             },
                         },
                         {
                             type: "image",
                             source: {
                                 type: "base64",
-                                media_type: textureImageData.media_type,
-                                data: textureImageData.data,
+                                media_type: markedImageData.media_type,
+                                data: markedImageData.data,
                             },
                         },
                         {
                             type: "text",
-                            text: `You are generating a prompt for Google's Imagen AI (Nano Banana) for an interior design transformation task.
+                            text: `You are generating a prompt for Google's Gemini 2.5 Flash Image AI for an interior design floor transformation task.
 
 SYSTEM ARCHITECTURE:
-- INPUT (to you): Image 1 (markedImage - the room to edit) + Image 2 (textureImage - material reference)
-- OUTPUT (from you): A complete prompt that Imagen will use with ONLY Image 1
-- CRITICAL: Imagen will receive ONLY Image 1 + your prompt. It will NOT see Image 2.
+- INPUT (to you): Image 1 (textureImage - material reference) + Image 2 (markedImage - room with GREEN DOT marker on floor)
+- OUTPUT (from you): A complete prompt for Gemini to replace the floor
+- CRITICAL: Gemini will receive TWO images: [Image 1 (texture), unmarked original room, your prompt]
+- Gemini will NOT see the green dot - you must convert the dot into spatial text descriptions of the floor
 
-YOUR TASK:
-Analyze both images and generate a prompt that describes the material from Image 2 in precise textual detail, so Imagen can apply it to Image 1 without seeing Image 2.
+🎯 YOUR TASK - DETECT FLOOR AND DESCRIBE ITS BOUNDARIES:
 
-PROMPT STRUCTURE:
-[Action verb] + [specific marked area description] + [detailed material description from Image 2] + [preservation instructions] + [quality requirements] + [boundary constraints]
+STEP 1 - CONFIRM GREEN DOT IS ON FLOOR:
+□ Look for BRIGHT GREEN circle (color #00FF00) in Image 2
+□ Confirm it's on the floor (horizontal surface in lower portion of image)
+□ If dot is NOT on floor, output "ERROR: No floor marked"
 
-REQUIREMENTS:
+STEP 2 - ANALYZE FLOOR BOUNDARIES:
+Carefully examine where the floor starts and ends in the image:
 
-1. ANALYZE IMAGE 1 (markedImage) and identify the marked/selected area:
-   - Determine what surfaces are marked for transformation (walls, floors, specific objects)
-   - Describe the location precisely (e.g., "the left wall", "all floor tiles", "the cabinet doors")
-   - Note the extent of the marked area (partial or full coverage, specific sections)
-   - Identify the current material/appearance of the marked area
-   - Spatial relationships: which parts of the room are affected (e.g., "walls from floor to ceiling", "lower half of walls")
+A. LEFT BOUNDARY:
+   - Does the floor extend to the left edge of the image?
+   - Is there a wall, furniture, or object on the left side?
+   - Example: "The floor starts at the left edge" OR "The floor starts below the left wall"
 
-2. ANALYZE IMAGE 2 (textureImage) and extract:
-   - Base color + undertones (e.g., "warm white with cream undertones")
-   - Pattern details: veining, grain, geometric patterns (direction, scale, characteristics)
-   - Finish type: matte, satin, glossy, polished, brushed
-   - Reflectivity level: non-reflective, slight sheen, mirror-like
-   - Material type if identifiable: marble, wood, ceramic, metal, fabric, stone
-   - Texture qualities: smooth, rough, polished, textured
+B. RIGHT BOUNDARY:
+   - Does the floor extend to the right edge of the image?
+   - Is there a wall, furniture, or object on the right side?
+   - Example: "The floor extends to the right edge" OR "The floor ends at the right wall base"
 
-3. DESCRIBE THE TRANSFORMATION:
-   - Start with action verb: "Replace/Change/Transform"
-   - Use the precise marked area description from step 1 as your target
-   - Include full material description from Image 2 analysis
-   - Be specific about what is marked and what will change
+C. FRONT BOUNDARY (bottom of image):
+   - Usually the floor extends to the bottom edge of the frame
+   - Example: "The floor runs to the bottom edge of the image"
 
-4. PRESERVATION INSTRUCTIONS:
-   - "Keep the exact [room/bathroom/space] layout unchanged"
-   - "Preserve all fixtures, furniture, lighting, and camera angle"
-   - "Maintain original room dimensions and proportions"
+D. BACK BOUNDARY (where floor meets far wall):
+   - Where does the visible floor end in the distance?
+   - Is there a back wall visible?
+   - Example: "The floor extends back to the far wall" OR "The floor continues to the back wall"
 
-5. QUALITY SPECIFICATIONS:
-   - "Photorealistic quality"
-   - "Maintain lighting consistency with existing scene"
-   - "Accurate shadows and reflections matching the original"
+E. VISIBLE OBSTACLES:
+   - Are there objects ON the floor (furniture, toilet, fixtures)?
+   - Note: "There is a [object] on the floor"
 
-6. BOUNDARY CONSTRAINTS:
-   - "Do not extend image boundaries"
-   - "Same frame size and aspect ratio"
-   - "In-place editing only, no canvas expansion"
+STEP 3 - CONSTRUCT THE GEMINI PROMPT WITH DETAILED FLOOR DESCRIPTION:
 
-CRITICAL RULES:
-- Do NOT reference "Image 2" or "reference image" in your output
-- Do NOT say "use the material from Image 2"
-- Write as if only the markedImage exists
-- Your prompt must be completely self-contained
+FORMAT:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor [detailed spatial description of boundaries and extent]."
 
-EXAMPLE OUTPUT:
-"Replace the marked surfaces - specifically all wall tiles covering the left, right, and back walls from floor to ceiling, and all floor tiles throughout the bathroom - with white Calacatta marble featuring soft gray diagonal veining in irregular patterns, polished to a mirror-like finish with high reflectivity and subtle cream undertones. Keep the exact bathroom layout, all fixtures, furniture, lighting, and camera angle unchanged. Photorealistic quality with accurate reflections and lighting consistency. Do not extend image boundaries. Same frame size. In-place editing only."
+The detailed spatial description should include:
+- Where the floor starts (left/right/front boundaries)
+- Where the floor extends to (edges, walls)
+- Any notable features (runs under furniture, extends to far wall, etc.)
 
-Return ONLY the optimized prompt text, nothing else.`
+EXAMPLE OUTPUTS:
+
+Example 1 - Open floor:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor extends from the left edge to the right edge of the image and runs from the bottom edge back to the far wall."
+
+Example 2 - Floor with furniture:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor starts at the left wall base, extends to the right edge, runs to the bottom of the image, and continues back to the far wall, passing under the visible furniture."
+
+Example 3 - Bathroom floor:
+"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor extends from wall to wall on both sides, runs from the bottom edge of the image, and extends back beneath the toilet and vanity to the rear wall."
+
+🚨🚨🚨 EXTREMELY CRITICAL OUTPUT INSTRUCTIONS 🚨🚨🚨
+
+YOUR RESPONSE MUST BE ONLY THE FINAL PROMPT - NOTHING ELSE!
+
+❌ DO NOT WRITE: "STEP 1", "STEP 2", "STEP 3" or any step labels
+❌ DO NOT WRITE: "Looking at the images", "I found", "I can see", "The green dot"
+❌ DO NOT explain your process, reasoning, or analysis
+❌ DO NOT describe what you see - just output the prompt
+❌ DO NOT show your work
+
+✅ WRITE ONLY: The prompt that starts with "Take the texture/material shown in the first image..."
+
+Your ENTIRE response must be TWO SENTENCES:
+1. The main instruction (Take the texture... with no gaps.)
+2. The floor boundary description (The floor [spatial details].)
+
+Start directly with "Take the texture/material..." - nothing before or after.`
                         }
                     ]
                 }

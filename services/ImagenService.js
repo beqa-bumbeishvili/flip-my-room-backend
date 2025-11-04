@@ -32,9 +32,6 @@ class ImagenService {
       console.log('   Original image provided:', !!originalImage);
       console.log('   Texture image provided:', !!textureImage);
 
-      console.log('   Original image:', originalImage);
-      console.log('   Texture image:', textureImage);
-      
       // Extract base64 data from data URIs
       const extractBase64 = (dataUri) => {
         const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
@@ -50,7 +47,7 @@ class ImagenService {
       const textureImageBase64 = extractBase64(textureImage);
       const textureImageMimeType = textureImage.match(/^data:([^;]+);base64,/)?.[1] || 'image/png';
       
-      console.log('\n📡 Calling Nano Banana (Gemini 2.5 Flash Image) API...');
+      console.log('📡 Calling Nano Banana (Gemini 2.5 Flash Image) API...');
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: [
@@ -71,6 +68,7 @@ class ImagenService {
           }
         ],
         config: {
+          temperature: 0,
         }
       });
 
