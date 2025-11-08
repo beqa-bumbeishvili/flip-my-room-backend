@@ -376,85 +376,119 @@ export async function generatePromptFromImageOptimizedForFloor(markedImage, text
                         },
                         {
                             type: "text",
-                            text: `You are generating a prompt for Google's Gemini 2.5 Flash Image AI for an interior design floor transformation task.
-
+                            text: `You are generating a prompt for Google's Flash Image 2.5 AI (Nano Banana) for an interior design transformation task.
 SYSTEM ARCHITECTURE:
-- INPUT (to you): Image 1 (textureImage - material reference) + Image 2 (markedImage - room with GREEN DOT marker on floor)
-- OUTPUT (from you): A complete prompt for Gemini to replace the floor
-- CRITICAL: Gemini will receive TWO images: [Image 1 (texture), unmarked original room, your prompt]
-- Gemini will NOT see the green dot - you must convert the dot into spatial text descriptions of the floor
 
-🎯 YOUR TASK - DETECT FLOOR AND DESCRIBE ITS BOUNDARIES:
+INPUT (to you): Image 1 (textureImage - material reference) + Image 2 (the room to edit)
+OUTPUT (from you): A complete prompt that Nano Banana will use with ONLY Image 2
 
-STEP 1 - CONFIRM GREEN DOT IS ON FLOOR:
-□ Look for BRIGHT GREEN circle (color #00FF00) in Image 2
-□ Confirm it's on the floor (horizontal surface in lower portion of image)
-□ If dot is NOT on floor, output "ERROR: No floor marked"
+YOUR TASK:
+Analyze both images and generate a prompt that instructs Nano Banana to directly copy the material from Image 1 and apply it to Image 2, WITHOUT describing the texture's appearance in detail.
+PROMPT STRUCTURE:
+[Action verb] + [floor area description from image2] + [direct reference to image 1 without description] + [format/orientation instructions if non-square] + [room dimensions if helpful] + [perspective instructions if non-square] + [preservation instructions] + [quality specifications] + [boundary constraints] + [scaling instructions]
+REQUIREMENTS:
 
-STEP 2 - ANALYZE FLOOR BOUNDARIES:
-Carefully examine where the floor starts and ends in the image:
+ANALYZE IMAGE 2 (room to edit) and identify the floor area:
 
-A. LEFT BOUNDARY:
-   - Does the floor extend to the left edge of the image?
-   - Is there a wall, furniture, or object on the left side?
-   - Example: "The floor starts at the left edge" OR "The floor starts below the left wall"
+Determine the floor surface and estimate room dimensions if relevant
+Describe the floor precisely (e.g., "entire floor surface", "all floor tiles")
+Note the extent of the floor area (partial or full coverage, specific sections)
+Identify the current material/appearance of the floor
+Spatial relationships: which parts of the room are affected
 
-B. RIGHT BOUNDARY:
-   - Does the floor extend to the right edge of the image?
-   - Is there a wall, furniture, or object on the right side?
-   - Example: "The floor extends to the right edge" OR "The floor ends at the right wall base"
 
-C. FRONT BOUNDARY (bottom of image):
-   - Usually the floor extends to the bottom edge of the frame
-   - Example: "The floor runs to the bottom edge of the image"
+ANALYZE PROVIDED TILE DIMENSIONS:
 
-D. BACK BOUNDARY (where floor meets far wall):
-   - Where does the visible floor end in the distance?
-   - Is there a back wall visible?
-   - Example: "The floor extends back to the far wall" OR "The floor continues to the back wall"
+Check if tile is square (e.g., 15x15cm, 50x50cm) or non-square (e.g., 30x90cm, 20x60cm)
+For SQUARE tiles: Keep prompt simple and general
+For NON-SQUARE tiles: Add specific orientation, perspective, and directional instructions with HEAVY EMPHASIS
 
-E. VISIBLE OBSTACLES:
-   - Are there objects ON the floor (furniture, toilet, fixtures)?
-   - Note: "There is a [object] on the floor"
 
-STEP 3 - CONSTRUCT THE GEMINI PROMPT WITH DETAILED FLOOR DESCRIPTION:
+DO NOT DESCRIBE IMAGE 1 (textureImage):
 
-FORMAT:
-"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor [detailed spatial description of boundaries and extent]."
+Simply reference "the exact texture and material shown in image 1"
+Let the AI interpret image 1 directly
+Use phrases like: "copy image 1 exactly", "use image 1 as the direct reference"
+Mention: "Rotating the texture is OK" (especially for non-square)
 
-The detailed spatial description should include:
-- Where the floor starts (left/right/front boundaries)
-- Where the floor extends to (edges, walls)
-- Any notable features (runs under furniture, extends to far wall, etc.)
 
-EXAMPLE OUTPUTS:
+DESCRIBE THE TRANSFORMATION:
 
-Example 1 - Open floor:
-"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor extends from the left edge to the right edge of the image and runs from the bottom edge back to the far wall."
+Start with action verb: "Replace/Change/Transform"
+Use the precise floor description from step 1 as your target
+Reference image 1 directly: "by applying the exact texture from image 1"
 
-Example 2 - Floor with furniture:
-"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor starts at the left wall base, extends to the right edge, runs to the bottom of the image, and continues back to the far wall, passing under the visible furniture."
 
-Example 3 - Bathroom floor:
-"Take the texture/material shown in the first image and use it as a repeating tile pattern to completely cover the entire floor surface in the second image. Tile this pattern repeatedly across the full floor with no gaps. The floor extends from wall to wall on both sides, runs from the bottom edge of the image, and extends back beneath the toilet and vanity to the rear wall."
+FORMAT & ORIENTATION INSTRUCTIONS (ONLY FOR NON-SQUARE TILES):
+When aspect ratio is NOT 1:1, add these instructions with MAXIMUM EMPHASIS:
 
-🚨🚨🚨 EXTREMELY CRITICAL OUTPUT INSTRUCTIONS 🚨🚨🚨
+Use terminology: "planks" or "elongated panels" instead of "tiles"
+CRITICAL marker at beginning: "CRITICAL LAYOUT: This is NOT square format."
+Specify orientation multiple times: "with their long axis running front-to-back (toward and away from camera)"
+Clarify dimensions repeatedly:
 
-YOUR RESPONSE MUST BE ONLY THE FINAL PROMPT - NOTHING ELSE!
+"[LONG]cm dimension runs [DIRECTION]"
+"[SHORT]cm dimension runs [PERPENDICULAR DIRECTION]"
+"Each plank measures [SHORT]cm × [LONG]cm (NOT [LONG]cm × [LONG]cm)"
 
-❌ DO NOT WRITE: "STEP 1", "STEP 2", "STEP 3" or any step labels
-❌ DO NOT WRITE: "Looking at the images", "I found", "I can see", "The green dot"
-❌ DO NOT explain your process, reasoning, or analysis
-❌ DO NOT describe what you see - just output the prompt
-❌ DO NOT show your work
 
-✅ WRITE ONLY: The prompt that starts with "Take the texture/material shown in the first image..."
+Use multiple metaphors: "oriented like floorboards/wood planks running deep into the room"
+Emphasize ratio: "maintaining a [ratio] aspect ratio"
+Add strong perspective notes:
 
-Your ENTIRE response must be TWO SENTENCES:
-1. The main instruction (Take the texture... with no gaps.)
-2. The floor boundary description (The floor [spatial details].)
+"PERSPECTIVE EMPHASIS: Due to camera angle, planks in foreground appear less elongated"
+"Planks receding toward back wall show maximum elongation effect"
+"The lengthwise direction creates strong vanishing lines toward the back"
 
-Start directly with "Take the texture/material..." - nothing before or after.`
+
+Include room dimensions: "The room measures approximately [WIDTH]m wide by [DEPTH]m deep"
+Reinforce at end: "Remember: planks are [SHORT]cm wide × [LONG]cm long, NOT square"
+
+For square tiles, skip all orientation instructions
+PRESERVATION INSTRUCTIONS:
+
+"Keep room layout, fixtures, lighting, and camera angle unchanged"
+Keep brief
+
+
+QUALITY SPECIFICATIONS:
+
+"Photorealistic quality"
+Keep minimal
+
+
+BOUNDARY CONSTRAINTS:
+
+"Same frame size"
+Keep minimal
+
+
+SCALING INSTRUCTIONS:
+Formula: [SCALE]-SCALE, [FREQUENCY]-FREQUENCY texture repetition - each tile/plank is [SIZE]cm x [SIZE]cm (or [W]cm x [L]cm for non-square)
+Scale + Frequency pairs:
+
+3-15cm: MICRO to SMALL-SCALE, VERY HIGH to HIGH-FREQUENCY
+15-30cm: SMALL-SCALE, HIGH-FREQUENCY (default for square)
+30-50cm: MEDIUM-SCALE, MODERATE-FREQUENCY
+50-100cm: LARGE-SCALE, LOW-FREQUENCY
+
+Always add: "Cut planks/tiles at all edges (walls, corners) to ensure complete floor coverage with no gaps - every part of floor must be covered"
+
+CRITICAL RULES:
+
+Your prompt must be completely self-contained
+DO NOT describe the texture appearance - only reference image 1 directly
+Keep prompts CONCISE for square tiles (~80-120 words)
+For non-square tiles, ADD MAXIMUM EMPHASIS with repetition (~200-250 words)
+Default is 15cm x 15cm square tiles unless specified otherwise
+Use "tiles" for square formats, "planks/panels" for non-square formats
+For non-square: Repeat orientation instructions 3-4 times using different phrasings
+
+EXAMPLE OUTPUT (Square tiles - 50x50cm):
+"Replace the entire floor surface by applying the exact texture and material shown in image 1 as repeating tiles. Use image 1 as the direct reference - copy its appearance exactly without interpretation. Rotating the texture is OK. Apply MEDIUM-SCALE, MODERATE-FREQUENCY texture repetition - each tile measuring 50cm x 50cm with visible grout lines. Cut tiles at all edges to ensure complete floor coverage with no gaps. Keep room layout, fixtures, lighting, and camera angle unchanged. Photorealistic quality. Same frame size."
+EXAMPLE OUTPUT (Non-square planks - 35x90cm):
+"Replace the entire floor by applying the exact texture from image 1 as repeating elongated planks. CRITICAL LAYOUT: This is NOT square format. The planks run with their long axis front-to-back (toward and away from camera), like floorboards running deep into the room. The room measures approximately 3 meters wide by 3.5 meters deep. Use image 1 as direct reference - copy exactly. Rotating the texture is OK. Each plank measures 35cm wide × 90cm long (maintaining a 1:2.6 aspect ratio). The 90cm LONG dimension runs front-to-back (deep into room). The 35cm SHORT dimension runs left-to-right (parallel to window). Left-right is always SHORT (35cm). Front-to-back is always LONG (90cm) - planks stretch deeply toward the back wall. PERSPECTIVE EMPHASIS: Due to camera angle, planks in foreground appear less elongated. Planks receding toward window/back wall show maximum elongation effect, creating strong vanishing lines toward the back. The lengthwise orientation creates depth lines running away from camera. MEDIUM-SCALE, MODERATE-FREQUENCY repetition with visible grout lines separating planks. Cut planks at all edges (walls, corners) to ensure complete floor coverage with no gaps. Remember: planks are 35cm wide × 90cm long elongated format, NOT 35cm × 35cm square. Keep room layout, fixtures, lighting, and camera angle unchanged. Photorealistic quality. Same frame size."
+Return ONLY the optimized prompt text, nothing else.`
                         }
                     ]
                 }
