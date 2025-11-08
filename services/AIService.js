@@ -467,3 +467,145 @@ Start directly with "Take the texture/material..." - nothing before or after.`
         throw new Error('Failed to generate prompt from Claude');
     }
 }
+
+
+
+export async function generatePromptFromImageOptimizedForFloorAndDimensions(markedImage, textureImage, anthropicAPI) {
+    try {
+        // Extract base64 data and media type from data URI
+        // Format: data:image/png;base64,iVBORw0KG...
+        const extractImageData = (dataUri) => {
+            const matches = dataUri.match(/^data:([^;]+);base64,(.+)$/);
+            
+            if (!matches) {
+                throw new Error('Invalid image data URI format');
+            }
+            
+            return {
+                media_type: matches[1],
+                data: matches[2]
+            };
+        };
+        
+        const markedImageData = extractImageData(markedImage);
+        const textureImageData = extractImageData(textureImage);
+        
+        // Re-encode to ensure proper base64 padding
+        const decodedMarkedImage = Buffer.from(markedImageData.data, 'base64');
+        markedImageData.data = decodedMarkedImage.toString('base64');
+        
+        const decodedTextureImage = Buffer.from(textureImageData.data, 'base64');
+        textureImageData.data = decodedTextureImage.toString('base64');
+
+        const message = await anthropicAPI.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1500,
+            temperature: 0,
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: textureImageData.media_type,
+                                data: textureImageData.data,
+                            },
+                        },
+                        {
+                            type: "image",
+                            source: {
+                                type: "base64",
+                                media_type: markedImageData.media_type,
+                                data: markedImageData.data,
+                            },
+                        },
+                        {
+                            type: "text",
+                            text: `You are generating a prompt for Google's Flash Image 2.5 AI (Nano Banana) for an interior design transformation task.
+
+SYSTEM ARCHITECTURE:
+- INPUT (to you): Image 1 (textureImage - material reference) + Image 2 (the room to edit)
+- OUTPUT (from you): A complete prompt that Nano Banana will use with ONLY Image 2 
+
+YOUR TASK:
+Analyze both images and generate a prompt that instructs Nano Banana to directly copy the material from Image 1 and apply it to Image 2, WITHOUT describing the texture's appearance in detail.
+
+PROMPT STRUCTURE:
+[Action verb] + [floor area description from image2] + [direct reference to image 1 without description] + [preservation instructions] + [quality specifications] + [boundary constraints] + [scaling instructions]
+
+REQUIREMENTS:
+
+1. ANALYZE IMAGE 2 (room to edit) and identify the floor area:
+   - Determine the floor surface, try identify specific/close dimensions like length and area
+   - Describe the floor precisely ( "all floor tiles")
+   - Note the extent of the floor area (partial or full coverage, specific sections, in relation to residing objects)
+   - Identify the current material/appearance of the floor
+   - Spatial relationships: which parts of the room are affected (e.g., "floors under the sofa")
+
+2. DO NOT DESCRIBE IMAGE 1 (textureImage):
+   - Instead of describing color, pattern, finish, or material type
+   - Simply reference "the exact texture and material shown in image 1"
+   - Let the AI interpret image 1 directly
+   - Use phrases like: "copy image 1 exactly", "use image 1 as the direct reference", "match it precisely"
+
+3. DESCRIBE THE TRANSFORMATION:
+   - Start with action verb: "Replace/Change/Transform"
+   - Use the precise floor description from step 1 as your target
+   - Reference image 1 directly: "by taking the exact texture and material shown in image 1"
+   - Emphasize direct copying: "Use image 1 as the direct reference - copy its color, pattern, veining, finish, and reflectivity exactly without interpretation"
+   - Add: "The floor material must look identical to what is shown in image 1 - match it precisely"
+
+4. PRESERVATION INSTRUCTIONS:
+   - "Keep the exact [room/bathroom/space] layout unchanged"
+   - "Preserve all fixtures, furniture, lighting, and camera angle"
+   - "Maintain original room dimensions and proportions"
+
+5. QUALITY SPECIFICATIONS:
+   - "Photorealistic quality"
+   - "Maintain lighting consistency with existing scene"
+   - "Accurate shadows and reflections appropriate to the material shown in image 1"
+
+6. BOUNDARY CONSTRAINTS:
+   - "Do not extend image boundaries"
+   - "Same frame size and aspect ratio"
+   - "In-place editing only, no canvas expansion"
+
+CRITICAL RULES:
+- Your prompt must be completely self-contained
+- DO NOT describe the texture appearance - only reference image 1 directly
+- Make sure the default is small-scale, high frequency tiles - 15 cm in width. But if additional information is provided about the specific dimension, feel free to override
+- Emphasize that the AI should copy image 1 exactly, not interpret or describe it
+
+Additional helpers:
+
+Scaling - Texture Scale Control for AI Image Generation:
+To control tile/pattern size in Gemini 2.5 Flash (nano-banana), use:
+Formula: [SCALE]-SCALE, [FREQUENCY]-FREQUENCY texture repetition - each tile is [SIZE]cm x [SIZE]cm
+Scale + Frequency pairs by tile size:
+* 3cm tiles: MICRO-SCALE, VERY HIGH-FREQUENCY (mosaic-like density)
+* 15cm tiles: SMALL-SCALE, HIGH-FREQUENCY (standard small format)
+* 50cm tiles: MEDIUM-SCALE, MODERATE-FREQUENCY (medium format)
+* 100cm tiles: LARGE-SCALE, LOW-FREQUENCY (large format pavers)
+Example: "LARGE-SCALE, LOW-FREQUENCY texture repetition - each tile is 100cm x 100cm"
+Always add: "It's OK to cut tiles at edges where they don't fit"
+
+REVISED EXAMPLES OF COMPLETE OUTPUTS:
+
+Example 1 - Floor only:
+"Replace the entire floor surface by taking the exact texture and material shown in image 1 and applying it as repeating tiles. Use image 1 as the direct reference - copy its appearance exactly without interpretation. Tile the pattern from image 1 repeatedly across the full floor with SMALL-SCALE, HIGH-FREQUENCY texture repetition - each tile measuring 15cm x 15cm. It's OK to cut tiles at edges where they don't fit. The floor material must look identical to what is shown in image 1 - match it precisely."
+
+Return ONLY the optimized prompt text, nothing else.`
+                        }
+                    ]
+                }
+            ]
+        });
+  
+        return message.content[0].text;
+    } catch (error) {
+        console.error('Error calling Claude API:', error);
+        throw new Error('Failed to generate prompt from Claude');
+    }
+}
