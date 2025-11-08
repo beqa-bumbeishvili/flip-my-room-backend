@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const generateClaudePrompt = async (req, res) => {
   try {
-    let { markedImage, textureImage } = req.body;
+    let { markedImage, textureImage, productTitle } = req.body;
 
     const anthropicAPI = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -20,7 +20,7 @@ export const generateClaudePrompt = async (req, res) => {
     }
 
     // const prompt = await generatePromptFromImageOptimizedForFloorAndDimensions(markedImage, textureImage, originalImage, anthropicAPI);
-    const prompt = await generatePromptFromImageOptimizedForFloor(markedImage, textureImage, anthropicAPI);
+    const prompt = await generatePromptFromImageOptimizedForFloor(markedImage, textureImage, productTitle, anthropicAPI);
 
     res.json({
       success: true,

@@ -323,7 +323,7 @@ Start directly with "Take the texture/material shown in the first image..." - no
     }
 }
 
-export async function generatePromptFromImageOptimizedForFloor(markedImage, textureImage, anthropicAPI) {
+export async function generatePromptFromImageOptimizedForFloor(markedImage, textureImage, productTitle, anthropicAPI) {
     try {
         // Extract base64 data and media type from data URI
         // Format: data:image/png;base64,iVBORw0KG...
@@ -489,6 +489,10 @@ EXAMPLE OUTPUT (Square tiles - 50x50cm):
 EXAMPLE OUTPUT (Non-square planks - 35x90cm):
 "Replace the entire floor by applying the exact texture from image 1 as repeating elongated planks. CRITICAL LAYOUT: This is NOT square format. The planks run with their long axis front-to-back (toward and away from camera), like floorboards running deep into the room. The room measures approximately 3 meters wide by 3.5 meters deep. Use image 1 as direct reference - copy exactly. Rotating the texture is OK. Each plank measures 35cm wide × 90cm long (maintaining a 1:2.6 aspect ratio). The 90cm LONG dimension runs front-to-back (deep into room). The 35cm SHORT dimension runs left-to-right (parallel to window). Left-right is always SHORT (35cm). Front-to-back is always LONG (90cm) - planks stretch deeply toward the back wall. PERSPECTIVE EMPHASIS: Due to camera angle, planks in foreground appear less elongated. Planks receding toward window/back wall show maximum elongation effect, creating strong vanishing lines toward the back. The lengthwise orientation creates depth lines running away from camera. MEDIUM-SCALE, MODERATE-FREQUENCY repetition with visible grout lines separating planks. Cut planks at all edges (walls, corners) to ensure complete floor coverage with no gaps. Remember: planks are 35cm wide × 90cm long elongated format, NOT 35cm × 35cm square. Keep room layout, fixtures, lighting, and camera angle unchanged. Photorealistic quality. Same frame size."
 Return ONLY the optimized prompt text, nothing else.`
+                        },
+                        {
+                            type: "text",
+                            text: `Product Title: ${productTitle}`
                         }
                     ]
                 }
