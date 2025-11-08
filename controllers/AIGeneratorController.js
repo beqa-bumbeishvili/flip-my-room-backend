@@ -1,4 +1,4 @@
-import {generatePromptWithRepeatedImage, generatePromptFromImageOptimizedForFloor } from '../services/AIService.js';
+import {generatePromptWithRepeatedImage, generatePromptFromImageOptimizedForFloor, generatePromptFromImageOptimizedForFloorAndDimensions } from '../services/AIService.js';
 import ImagenService from "../services/ImagenService.js";
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -19,7 +19,7 @@ export const generateClaudePrompt = async (req, res) => {
       });
     }
 
-    // const prompt = await generatePromptFromImages(markedImage, textureImage, originalImage, anthropicAPI);
+    // const prompt = await generatePromptFromImageOptimizedForFloorAndDimensions(markedImage, textureImage, originalImage, anthropicAPI);
     const prompt = await generatePromptFromImageOptimizedForFloor(markedImage, textureImage, anthropicAPI);
 
     res.json({

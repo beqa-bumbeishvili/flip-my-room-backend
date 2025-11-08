@@ -468,8 +468,6 @@ Start directly with "Take the texture/material..." - nothing before or after.`
     }
 }
 
-
-
 export async function generatePromptFromImageOptimizedForFloorAndDimensions(markedImage, textureImage, anthropicAPI) {
     try {
         // Extract base64 data and media type from data URI
